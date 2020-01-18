@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en" prefix="og: http://ogp.me/ns# fb: https://www.facebook.com/2008/fbml">
+<head>
+    <title>Making a Deep Learning Server - waydegg.com</title>
+    <!-- Using the latest rendering mode for IE -->
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+
+
+<link rel="canonical" href="https://waydegg.com/making-a-dl-server.html">
+
+        <meta name="author" content="Wayde Gilliam" />
+        <meta name="keywords" content="deep learning,server,fastai" />
+        <meta name="description" content="A Guide for Creating a Server for Deep Learning: Assembly, Server &amp; Library Setup" />
+
+        <meta property="og:site_name" content="waydegg.com" />
+        <meta property="og:type" content="article"/>
+        <meta property="og:title" content="Making a Deep Learning Server"/>
+        <meta property="og:url" content="https://waydegg.com/making-a-dl-server.html"/>
+        <meta property="og:description" content="A Guide for Creating a Server for Deep Learning: Assembly, Server &amp; Library Setup"/>
+        <meta property="article:published_time" content="2020-01-17" />
+            <meta property="article:section" content="articles" />
+            <meta property="article:tag" content="deep learning" />
+            <meta property="article:tag" content="server" />
+            <meta property="article:tag" content="fastai" />
+            <meta property="article:author" content="Wayde Gilliam" />
+
+
+
+    <!-- Bootstrap -->
+        <link rel="stylesheet" href="https://waydegg.com/theme/css/bootstrap.simplex.min.css" type="text/css"/>
+    <link href="https://waydegg.com/theme/css/font-awesome.min.css" rel="stylesheet">
+
+    <link href="https://waydegg.com/theme/css/pygments/monokai.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://waydegg.com/theme/css/style.css" type="text/css"/>
+        <link href="https://waydegg.com/extra/custom.css" rel="stylesheet">
+
+        <link href="https://waydegg.com/feeds/all.atom.xml" type="application/atom+xml" rel="alternate"
+              title="waydegg.com ATOM Feed"/>
+
+
+</head>
+<body>
+
+<div class="navbar navbar-default navbar-fixed-top" role="navigation">
+    <div class="container">
+        <div class="navbar-header">
+            <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-ex1-collapse">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+            <a href="https://waydegg.com/" class="navbar-brand">
+waydegg.com            </a>
+        </div>
+        <div class="collapse navbar-collapse navbar-ex1-collapse">
+            <ul class="nav navbar-nav">
+                         <li><a href="https://waydegg.com/pages/about.html">
+                             About
+                          </a></li>
+            </ul>
+            <ul class="nav navbar-nav navbar-right">
+            </ul>
+        </div>
+        <!-- /.navbar-collapse -->
+    </div>
+</div> <!-- /.navbar -->
+
+<!-- Banner -->
+<!-- End Banner -->
+
+<!-- Content Container -->
+<div class="container">
+    <div class="row">
+        <div class="col-lg-12">
+    <section id="content">
+        <article>
+            <header class="page-header">
+                <h1>
+                    <a href="https://waydegg.com/making-a-dl-server.html"
+                       rel="bookmark"
+                       title="Permalink to Making a Deep Learning Server">
+                        Making a Deep Learning Server
+                    </a>
+                </h1>
+            </header>
+            <div class="entry-content">
+                <div class="panel">
+                    <div class="panel-body">
+<footer class="post-info">
+    <span class="label label-default">Date</span>
+    <span class="published">
+        <i class="fa fa-calendar"></i><time datetime="2020-01-17T01:48:00-08:00"> Fri 17 January 2020</time>
+    </span>
+
+
+
+
+
+<span class="label label-default">Tags</span>
+	<a href="https://waydegg.com/tag/deep-learning.html">deep learning</a>
+        /
+	<a href="https://waydegg.com/tag/server.html">server</a>
+        /
+	<a href="https://waydegg.com/tag/fastai.html">fastai</a>
+    
+</footer><!-- /.post-info -->                    </div>
+                </div>
+                <h3>A few things to note</h3>
+<p>I wrote this article in late 2018 and am updating it just now. The hardware choices will be a little outdated (though still a good choice for building your first dl-rig), however all of the software/installation steps have been updated.</p>
+<p>This article is intended to focus more on the server setup and working with multiple users at the same time, with the part assembly and software installation process being a simplified version of <a href="https://blog.slavv.com/the-1700-great-deep-learning-box-assembly-setup-and-benchmarks-148c5ebe6415">Slav Ivanov’s</a> article on creating your own DL Box.</p>
+<hr>
+<h3>Intro</h3>
+<p>I had just started going through part 1 of fast.ai’s course, “<a href="http://course.fast.ai/">Practical Deep Learning for Coders</a>”,  and I wanted to build my own server to train models as an upgrade from using an AWS p2 instance and storage. Realizing that I’d be using much larger data sets and not wanting to wait hours to train my models with the lack of adequate processing power, building my own DL rig was a good choice as it would save me a lot of time and money in the long run, as well as giving me good experience with putting a server together.</p>
+<h2>The Build</h2>
+<h3>Creating the Parts List</h3>
+<p>Before putting any list of parts together, you need to decide on what you actually want out of your machine. For me, I wanted the following:</p>
+<ul>
+<li>More powerful than an Amazon p2/p3 instance</li>
+<li>Room to add additional GPUs, RAM, storage, and custom liquid cooling</li>
+<li>Hardware that’s not going out of date for many years</li>
+<li>Fitting cost into a $3,000ish budget (cheaper now as these are older parts)</li>
+</ul>
+<p>I used <a href="https://pcpartpicker.com/">pcpartpicker.com</a> to spec everything out because of how easy it makes comparing other parts and organizing everything, along with their pretty good part compatibility checker (more on this later). I’ll go into detail on why I chose each part and how it works together with the system as a whole. For reference, the link to my server build can be found <a href="https://pcpartpicker.com/b/CgpG3C">here</a>.</p>
+<p><strong>GPU: GTX 1080 Ti Hybrid</strong></p>
+<p>This is the most important part in your build as you’re using your graphics card(s) to train models, so the more powerful your GPU, the faster you can work with massive datasets. A higher GPU memory equates to higher processing power (e.g., faster training, bigger batch sizes, etc…). I picked two of these cards for my server because I had room in my budget for them, and it allowed me to train my models on one of the cards and have another user train theirs on the second card. You can scale down the type of GPU you buy to fit into your budget (1070, 1060, etc.) along with preventing bottlenecking with your other parts. The Hybrid 1080 GPUs are also nice because they come with a preassembled aio water cooling system in addition to the normal fan cooling that the majority of GPUs have. 1080 Ti’s run hot when under full load, so having quality cooling is a necessity to prolong the life of your cards and retain their performance as you’re training models. For more on choosing choosing a graphics card, <a href="http://timdettmers.com/2017/04/09/which-gpu-for-deep-learning/">this article</a> had really helped me really understand what choices to make in regards to working in a Deep Learning environment.</p>
+<p><strong>CPU: AMD Threadripper 1900x</strong></p>
+<p>While you’re using your graphics card to train your neural networks, your CPU is still important as it’s used for operations such as data preparation, so those high core counts are going to help speed things up. I went with using the Treadripper as it’s a very new CPU on the market with very high core counts (32 cores with the TR2’s!) and their price is much lower than their intel counterparts. The 1900x is the lowest tier of the 1st get TR with only 8 cores, though my whole goal for this server is to keep it very upgradable. </p>
+<p>One thing to note is that when you’re choosing a CPU, make sure you have 8 or 16 pcie slots available for your graphics cards, as that’s when they perform best under load or you risk bottlenecking your system. On higher end CPUs, you’re pretty much guaranteed enough pcie slots if you had 4 graphics cards in your server. </p>
+<p><strong>Motherboard: MSI X399 SLI Plus</strong></p>
+<p>Opted for this board as it’s a full ATX board with room for 4 gpus, along with a max of 128GB of RAM. As I said earlier, one of the main goals for this server is to keep it very upgradable.</p>
+<p><strong>Memory: 32GB Corsair Vengeance LPX DDR4 (2 x 16GB)</strong></p>
+<p>More memory makes working with big datasets easier. The next thing I plan on upgrading is adding another 2 sticks of 16GB RAM, which is why I didn’t get quad channel ram (4 x 8GB sticks) even though it would make my performance a bit higher.</p>
+<p><strong>Storage: 256GB Samsung SSD &amp; 2TB HDD</strong></p>
+<p>I put Ubuntu, all my libraries, and the current datasat I’m working with on the SSD, and all of the other data I have stored on the the 2TB mechanical Hard Drive. </p>
+<p><strong>Cooler: Corsair H100i v2 Liquid Cooler</strong></p>
+<p>Threadrippers don’t come with a stock cooler (and you should pretty much always upgrade to at least a cheap aftermarket cooler if you’ve got $30 to spare) so I wanted something that was reliable for 24/7 use, cheap, and easy to maintenance. This all-in-one cooler was super easy to install and very reliable (there are maybe 1 or 2 cases out of hundreds of thousands of units that happen to leak coolant), and it’s dead silent.</p>
+<p><strong>Power Supply: EVGA SuperNOVA 1000w 80+ Gold Certified</strong></p>
+<p>Always get a PSU with more wattage than you technically need. PCPartpicker’s wattage calculator is nice to get a general idea of how much you’ll be pulling (in my case 824w), though it’s often times inaccurate by varying amounts so it’s best to play it safe to prevent your computer from not turning on. The “Gold Certified” is just referring to how efficient the PSU is (how much power is wasted as heat).</p>
+<p><strong>Case: Corsair 760T Full Tower</strong></p>
+<p>I got this case because of how much space there is inside it and for its price. While it doesn’t make your models train faster, the clear side panel and red LEDs do make you look a lot cooler. </p>
+<hr>
+<p><img alt="Computer parts" src="images/dl-rig_images/parts.jpg"></p>
+<p>A year’s worth of rigorous saving and graduation money in one picture</p>
+<h3>Putting the Parts Together</h3>
+<p>If you’re new to building computers, it’s a lot like putting together a really expensive Lego set. Anyone can do it as it much harder to mess things up than you think. I’ll quickly cover putting together my build, though I highly suggest following along a video of a full build as you’re putting your own together, like <a href="https://www.youtube.com/watch?v=IhX0fOUYd8Q">this</a> one! These instructions apply to pretty much any combination of parts you’re working with, as does the video guide I linked above.</p>
+<p><strong>Step 1: Installing the CPU</strong></p>
+<p><img alt="cpu installation" src="images/dl-rig_images/IMG_20180617_141320.jpg"></p>
+<p>This is probably the scariest part of building your computer as there’s a specific order of steps you have to follow and a couple easy things you could accidentally do to immediately destroy a ~$430 cpu (like smashing a single cpu pin). It’s easy though, just make sure you watch a video of someone putting in one beforehand so you know what to expect. For the Threadripper, the installation process is a bit different, as on most motherboards you don’t “bolt down” the processor but have a single lever instead.</p>
+<p><img alt="intel cpu installation" src="https://cdn-images-1.medium.com/max/1500/1*tAnrk_Z9Q9BJm7IkCK4oLw.jpeg">
+Photo credit to <a href="https://blog.slavv.com/the-1700-great-deep-learning-box-assembly-setup-and-benchmarks-148c5ebe6415">Slav Ivanov</a></p>
+<p><strong>Step 2: Installing the Power Supply</strong></p>
+<p><img alt="PSU installation" src="images/dl-rig_images/IMG_20180617_141326.jpg"></p>
+<p>There’s no right or wrong order to doing things, though from my own personal experience I like to have the PSU be the first part I put into the case due to some cases requiring you to slide the PSU into a slot that would cause you to travel “through the motherboard” if it were there.</p>
+<p><strong>Step 3: Putting Everything Else Together</strong></p>
+<p><img alt="Unpowered computer" src="images/dl-rig_images/IMG_20180618_095854.jpg"></p>
+<p>It’s a big jump in steps, but once the motherboard was in everything else was pretty easy to install. I’ll run though the order of installation:</p>
+<ol>
+<li>Installing the RAM. It’s very easy, just slide in your memory sticks in the right orientation and right slots on your mobo (see your manual as there are specific slots to use depending on how many sticks you have).</li>
+<li>Installing the CPU Cooler. The only minor inconvenience I had was having to replace the mounting bracket so that it was compatible with a TR, it just required a lot of force to change. It took 8 bolts to mount the radiator and I was done.</li>
+<li>Installing the Graphics Cards. Just slide them into their respective slots in your mobo (like memory, see your manual for which slots to put your card(s) into) and bolt on the radiators into your case. Make sure your radiators are <strong>above</strong> your gpu. I made that mistake in the above picture and had to remount it on the front panel of the case.</li>
+<li>Installing your Storage. I removed one of the drive bays to get more airflow, so I put my SSD and HDD together in the single drive bay in the bottom right.</li>
+</ol>
+<p><strong>Step 4: Success?</strong></p>
+<p><img alt="Powered on computer" src="images/dl-rig_images/IMG_20180618_165853.jpg"></p>
+<p>Time to turn your machine on. At first mine didn’t because I had the positive and negative cables for my case’s power button reversed, but after that I got to see the bright white and red glow I was hoping for. If all goes well you should see your computer post and then search for a boot device.</p>
+<hr>
+<h2>Setting up the Server</h2>
+<h3>Installing the OS</h3>
+<p>The next step is to install your OS. I’m using Linux since that’s what most DL frameworks are designed for. I went with Ubuntu Desktop v16.04 LTS and installed everything from a USB drive. There are a lot of free tools like <a href="https://unetbootin.github.io/#install">UNetbootin</a> or <a href="https://rufus.akeo.ie/">Rufus</a> (Windows only) you can download to prepare your thumb drive. <a href="https://tutorials.ubuntu.com/tutorial/tutorial-create-a-usb-stick-on-macos?_ga=2.169997348.541383618.1529376295-1852780805.1529376295#0">Here’s a helpful tutorial</a> going through the full process of creating a bootable USB on a Mac and <a href="https://www.howtogeek.com/howto/linux/create-a-bootable-ubuntu-usb-flash-drive-the-easy-way/">this one</a> if you’re using Windows.</p>
+<h3>Setting up SSH</h3>
+<p><strong>Step 1: Port Forwarding</strong></p>
+<p>You’ll have to go through a similar process with all routers, but since I have an apple router I followed through <a href="https://portforward.com/apple/">this guide</a> do the following:
+1. Set a static IP for your server so that it doesn’t change every time it shuts off.
+2. Log into your router using Apple Airport Utility
+3. Map the port for the server. You’ll need to find the MAC address of your server for this part, so see <a href="http://technologyinfinite.blogspot.com/2016/07/three-simple-ways-to-find-mac-address.html">this guide</a> for how to find it on Ubuntu.</p>
+<p><strong>Step 2: Creating a Dynamic IP Address</strong></p>
+<p>I used <noip.com> to create a dynamic ip address for the server which allowed me to remotely connect to it in terminal. You can use <a href="http://canyouseeme.org/">this website</a> to verify that it’s working.</p>
+<p>When I want to connect to my server, I type in a command that looks like this:</p>
+<div class="highlight"><pre><span></span>ssh <span class="o">[</span>my_username<span class="o">]</span>@<span class="o">[</span>my_ip<span class="o">]</span> -L <span class="m">8889</span>:<span class="o">[</span>dl-rig_static_ip<span class="o">]</span>:8888
+</pre></div>
+
+
+<p>I have my server running on port 8888 and my jupyter notebooks on 8889 (the -L option redirects your specified local port to a different host &amp; port). This is so that I can run notebooks locally on my machine for testing simultaneously with my server for training. If you don’t want this however, you can just type in everything before the -L part. I’ll explain how to change the port you run jupyter notebooks on in the next section.</p>
+<h3>Installing DL/ML Libraries</h3>
+<p>Now onto installing all of the libraries necessary for deep learning/machine learning. Depending on when you read this article, some of the steps may be simplfied or library versions changed for certain packages, so just be aware of that.  </p>
+<p>First we’ll make sure our system is up to date and install all of the basic tools that we'll need:</p>
+<div class="highlight"><pre><span></span>sudo apt-get update
+sudo apt-get --assume-yes upgrade
+sudo apt-get --assume-yes install tmux build-essential gcc g++ make binutils unzip
+sudo apt-get --assume-yes install software-properties-common
+sudo apt-get --assume-yes install git
+</pre></div>
+
+
+<p>The next step is downloading and installing all of the CUDA GPU drivers:</p>
+<div class="highlight"><pre><span></span>mkdir ~/downloads
+<span class="nb">cd</span> ~/downloads
+
+wget http://developer.download.nvidia.com/compute/cuda/repos/ubuntu1604/x86_64/cuda-repo-ubuntu1604_9.0.176-1_amd64.deb
+sudo dpkg -i cuda-repo-ubuntu1604_9.0.176-1_amd64.deb
+sudo apt-key adv --fetch-keys http://developer.download.nvidia.com/compute/cuda/repos/ubuntu1604/x86_64/7fa2af80.pub
+sudo apt-get update
+sudo apt-get -y install cuda
+sudo apt-get --assume-yes upgrade
+sudo apt-get --assume-yes autoremove
+sudo apt-get install cuda-toolkit-9.0 cuda-command-line-tools-9-0
+</pre></div>
+
+
+<p>Now we’ll verify that we installed all of the CUDA stuff correctly:</p>
+<div class="highlight"><pre><span></span>sudo modprobe nvidia
+nvcc --version
+nvidia-smi
+</pre></div>
+
+
+<p>From here we’ll add CUDA (Nvidia Deep Learning api) to our PATH variable:</p>
+<div class="highlight"><pre><span></span>cat &gt;&gt; ~/.bashrc <span class="s">&lt;&lt; &#39;EOF&#39;</span>
+<span class="s">export PATH=/usr/local/cuda-9.0/bin${PATH:+:${PATH}}</span>
+<span class="s">export LD_LIBRARY_PATH=/usr/local/cuda-9.0/lib64\</span>
+<span class="s">${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}</span>
+<span class="s">EOF</span>
+
+<span class="nb">source</span> ~/.bashrc
+</pre></div>
+
+
+<p>After that the next step is to install the CuDNN libraries (needed in creating neural networks):</p>
+<div class="highlight"><pre><span></span>wget http://files.fast.ai/files/cudnn-9.1-linux-x64-v7.tgz
+tar xf cudnn-9.1-linux-x64-v7.tgz
+sudo cp cuda/include/*.* /usr/local/cuda/include/
+sudo cp cuda/lib64/*.* /usr/local/cuda/lib64/
+</pre></div>
+
+
+<p>We’ll now install Anaconda for the current user:</p>
+<div class="highlight"><pre><span></span>wget <span class="s2">&quot;https://repo.continuum.io/archive/Anaconda3-5.0.1-Linux-x86_64.sh&quot;</span>
+bash <span class="s2">&quot;Anaconda3-5.0.1-Linux-x86_64.sh&quot;</span> -b
+
+<span class="nb">cd</span> ~
+
+<span class="nb">echo</span> <span class="s2">&quot;export PATH=\&quot;</span><span class="nv">$HOME</span><span class="s2">/anaconda3/bin:\$PATH\&quot;&quot;</span> &gt;&gt; ~/.bashrc
+<span class="nb">export</span> <span class="nv">PATH</span><span class="o">=</span><span class="s2">&quot;</span><span class="nv">$HOME</span><span class="s2">/anaconda3/bin:</span><span class="nv">$PATH</span><span class="s2">&quot;</span>
+conda install -y bcolz
+conda upgrade -y --all
+</pre></div>
+
+
+<p>Next, we’ll install Tensorflow and Keras:</p>
+<div class="highlight"><pre><span></span>pip install --ignore-installed --upgrade https://storage.googleapis.com/tensorflow/linux/gpu/tensorflow_gpu-1.8.0-cp36-cp36m-linux_x86_64.whl
+
+pip install keras
+mkdir ~/.keras
+<span class="nb">echo</span> <span class="s1">&#39;{</span>
+<span class="s1">    &quot;image_dim_ordering&quot;: &quot;tf&quot;,</span>
+<span class="s1">    &quot;epsilon&quot;: 1e-07,</span>
+<span class="s1">    &quot;floatx&quot;: &quot;float32&quot;,</span>
+<span class="s1">    &quot;backend&quot;: &quot;tensorflow&quot;</span>
+<span class="s1">}&#39;</span> &gt; ~/.keras/keras.json
+</pre></div>
+
+
+<p>Next, we’ll install the Python dependencies for Fastai:</p>
+<div class="highlight"><pre><span></span>mkdir -p ~/development/_training/ml
+<span class="nb">cd</span> ~/development/_training/ml
+
+git clone https://github.com/fastai/fastai.git
+<span class="nb">cd</span> fastai
+conda env update
+</pre></div>
+
+
+<p>The following few sections will be configuring jupyter notebook:</p>
+<div class="highlight"><pre><span></span><span class="c1"># Leaving the next line uncommented will prompt you to provide a password to</span>
+<span class="c1"># use with your jupyter notebook.</span>
+<span class="nv">jupass</span><span class="o">=</span><span class="sb">`</span>python -c <span class="s2">&quot;from notebook.auth import passwd; print(passwd())&quot;</span><span class="sb">`</span>
+<span class="c1"># To hardcode the password to &#39;jupyter&#39; comment line above and uncomment the line below.</span>
+<span class="c1">#jupass=sha1:85ff16c0f1a9:c296112bf7b82121f5ec73ef4c1b9305b9e538af</span>
+
+<span class="c1"># create ssl cert for jupyter notebook</span>
+openssl req -x509 -nodes -days <span class="m">365</span> -newkey rsa:1024 -keyout <span class="nv">$HOME</span>/mykey.key -out <span class="nv">$HOME</span>/mycert.pem -subj <span class="s2">&quot;/C=IE&quot;</span>
+
+<span class="c1"># configure notebook</span>
+<span class="nb">echo</span> <span class="s2">&quot;c.NotebookApp.certfile = u&#39;/home/{user}/mycert.pem&#39;&quot;</span> &gt;&gt; <span class="nv">$HOME</span>/.jupyter/jupyter_notebook_config.py
+<span class="nb">echo</span> <span class="s2">&quot;c.NotebookApp.keyfile = u&#39;/home/{user}/mykey.key&#39;&quot;</span> &gt;&gt; <span class="nv">$HOME</span>/.jupyter/jupyter_notebook_config.py
+<span class="nb">echo</span> <span class="s2">&quot;c.NotebookApp.password = u&#39;&quot;</span><span class="nv">$jupass</span><span class="s2">&quot;&#39;&quot;</span> &gt;&gt; <span class="nv">$HOME</span>/.jupyter/jupyter_notebook_config.py
+<span class="nb">echo</span> <span class="s2">&quot;c.NotebookApp.ip = &#39;*&#39;&quot;</span> &gt;&gt; <span class="nv">$HOME</span>/.jupyter/jupyter_notebook_config.py
+<span class="nb">echo</span> <span class="s2">&quot;c.NotebookApp.open_browser = False&quot;</span> &gt;&gt; <span class="nv">$HOME</span>/.jupyter/jupyter_notebook_config.py
+</pre></div>
+
+
+<p>To change the default port to run Jupyter notebooks on (port 8888), uncomment this line and enter in the desired port. This allows you to simultaneously run your notebooks on your server and locally, along with having multiple users use their notebooks while you use yours:</p>
+<div class="highlight"><pre><span></span><span class="c1">#echo &quot;c.NotebookApp.port = 9999&quot; &gt;&gt; $HOME/.jupyter/jupyter_notebook_config.py</span>
+</pre></div>
+
+
+<p>Now we’ll configure tmux, a tool that lets us create multiple “panes” in a Terminal window as well as keeping programs running after we disconnect. Checkout this documentation as it helped me a lot in understanding all of tmux’s capabilities. It’s quite helpful as you can run your notebook in one pane, monitor your gpu usage in another, and have a linux terminal open in another pane:</p>
+<div class="highlight"><pre><span></span>pip install tmuxp
+mkdir ~/.tmuxp
+</pre></div>
+
+
+<p>Next we’ll create the tmuxp config file that will set up our development environment in one command, without us having to configure our panes, launch jupyter notebook, etc. every time we want to work on something. For our fastai environment, we’ll start it with tmuxp load fastai. See this link on using tmuxp and here documents in bash scripts and this one for saving tmux sessions between server restarts. Anyways, here’s let’s configure our environment:</p>
+<div class="highlight"><pre><span></span>cat &gt; <span class="nv">$HOME</span>/.tmuxp/fastai.yml <span class="s">&lt;&lt;tmuxp-config </span>
+<span class="s">session_name: fast</span>ai
+windows:
+- window_name: dev window
+  layout: main-vertical
+  options:
+    main-pane-width: <span class="m">140</span>
+  shell_command_before:
+    <span class="c1"># run as a first command in all panes</span>
+    - <span class="nb">cd</span> ~/development/_training/ml/fastai
+    - <span class="nb">source</span> activate fastai
+  panes:
+    - shell_command:
+      - clear
+    - shell_command:
+      - clear
+      - jupyter notebook
+    - shell_command:
+      - watch -n <span class="m">0</span>.5 nvidia-smi
+Tmuxp-config
+</pre></div>
+
+
+<p>Because we don’t need them anymore, let’s delete the installation files:</p>
+<div class="highlight"><pre><span></span><span class="nb">cd</span> ~/downloads
+rm -rf cuda-repo-ubuntu1604_9.0.176-1_amd64.deb xf cudnn-9.1-linux-x64-v7.tgz Anaconda3-5.0.1-Linux-x86_64.sh        
+
+<span class="nb">cd</span> ~
+</pre></div>
+
+
+<p>And that’s it! As of writing this my server has been running 24/7 with no issues at all, completely silent and powering through training with ease. If you’ve got any questions, feel free to contact me via <a href="mailto:ztboneg@gmail.com">email</a>, <a href="https://twitter.com/waydegg">Twitter</a>, or on <a href="http://forums.fast.ai/u/waydegg">Fastai Fourms</a> and I’ll be more than happy to help! </p>
+<p>Some more works I referenced:</p>
+<ul>
+<li>https://www.digitalocean.com/community/tutorials/how-to-set-up-ssh-keys--2</li>
+<li>https://towardsdatascience.com/building-your-own-deep-learning-box-47b918aea1eb</li>
+<li>https://medium.com/impactai/setting-up-a-deep-learning-machine-in-a-lazy-yet-quick-way-be2642318850</li>
+</ul>
+            </div>
+            <!-- /.entry-content -->
+        </article>
+    </section>
+
+        </div>
+    </div>
+</div>
+<!-- End Content Container -->
+
+<footer>
+   <div class="container">
+      <hr>
+      <div class="row">
+         <div class="col-xs-10">&copy; 2020 Wayde Gilliam
+            &middot; Powered by <a href="https://github.com/getpelican/pelican-themes/tree/master/pelican-bootstrap3" target="_blank">pelican-bootstrap3</a>,
+            <a href="http://docs.getpelican.com/" target="_blank">Pelican</a>,
+            <a href="http://getbootstrap.com" target="_blank">Bootstrap</a>         </div>
+         <div class="col-xs-2"><p class="pull-right"><i class="fa fa-arrow-up"></i> <a href="#">Back to top</a></p></div>
+      </div>
+   </div>
+</footer>
+<script src="https://waydegg.com/theme/js/jquery.min.js"></script>
+
+<!-- Include all compiled plugins (below), or include individual files as needed -->
+<script src="https://waydegg.com/theme/js/bootstrap.min.js"></script>
+
+<!-- Enable responsive features in IE8 with Respond.js (https://github.com/scottjehl/Respond) -->
+<script src="https://waydegg.com/theme/js/respond.min.js"></script>
+
+
+    <script src="https://waydegg.com/theme/js/bodypadding.js"></script>
+    <!-- Google Analytics -->
+    <script type="text/javascript">
+
+        var _gaq = _gaq || [];
+        _gaq.push(['_setAccount', 'UA-156477838-1']);
+        _gaq.push(['_trackPageview']);
+
+        (function () {
+            var ga = document.createElement('script');
+            ga.type = 'text/javascript';
+            ga.async = true;
+            ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+            var s = document.getElementsByTagName('script')[0];
+            s.parentNode.insertBefore(ga, s);
+        })();
+    </script>
+    <!-- End Google Analytics Code -->
+
+
+</body>
+</html>

@@ -1,0 +1,920 @@
+<!DOCTYPE html>
+<html lang="en" prefix="og: http://ogp.me/ns# fb: https://www.facebook.com/2008/fbml">
+<head>
+    <title>(Data Cleaning) DL/ML in FRC Robotics Scouting/Strategy - waydegg.com</title>
+    <!-- Using the latest rendering mode for IE -->
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+
+
+<link rel="canonical" href="https://waydegg.com/frc-robotics-dl.html">
+
+        <meta name="author" content="Wayde Gilliam" />
+        <meta name="keywords" content="personal projects,robotics,scouting,deep learning" />
+        <meta name="description" content="Data Cleaning &amp; Feature Engineering on FRC Match/Team Data" />
+
+        <meta property="og:site_name" content="waydegg.com" />
+        <meta property="og:type" content="article"/>
+        <meta property="og:title" content="(Data Cleaning) DL/ML in FRC Robotics Scouting/Strategy"/>
+        <meta property="og:url" content="https://waydegg.com/frc-robotics-dl.html"/>
+        <meta property="og:description" content="Data Cleaning &amp; Feature Engineering on FRC Match/Team Data"/>
+        <meta property="article:published_time" content="2018-10-25" />
+            <meta property="article:section" content="articles" />
+            <meta property="article:tag" content="personal projects" />
+            <meta property="article:tag" content="robotics" />
+            <meta property="article:tag" content="scouting" />
+            <meta property="article:tag" content="deep learning" />
+            <meta property="article:author" content="Wayde Gilliam" />
+
+
+
+    <!-- Bootstrap -->
+        <link rel="stylesheet" href="https://waydegg.com/theme/css/bootstrap.simplex.min.css" type="text/css"/>
+    <link href="https://waydegg.com/theme/css/font-awesome.min.css" rel="stylesheet">
+
+    <link href="https://waydegg.com/theme/css/pygments/monokai.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://waydegg.com/theme/css/style.css" type="text/css"/>
+        <link href="https://waydegg.com/extra/custom.css" rel="stylesheet">
+
+        <link href="https://waydegg.com/feeds/all.atom.xml" type="application/atom+xml" rel="alternate"
+              title="waydegg.com ATOM Feed"/>
+
+
+</head>
+<body>
+
+<div class="navbar navbar-default navbar-fixed-top" role="navigation">
+    <div class="container">
+        <div class="navbar-header">
+            <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-ex1-collapse">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+            <a href="https://waydegg.com/" class="navbar-brand">
+waydegg.com            </a>
+        </div>
+        <div class="collapse navbar-collapse navbar-ex1-collapse">
+            <ul class="nav navbar-nav">
+                         <li><a href="https://waydegg.com/pages/about.html">
+                             About
+                          </a></li>
+            </ul>
+            <ul class="nav navbar-nav navbar-right">
+            </ul>
+        </div>
+        <!-- /.navbar-collapse -->
+    </div>
+</div> <!-- /.navbar -->
+
+<!-- Banner -->
+<!-- End Banner -->
+
+<!-- Content Container -->
+<div class="container">
+    <div class="row">
+        <div class="col-lg-12">
+    <section id="content">
+        <article>
+            <header class="page-header">
+                <h1>
+                    <a href="https://waydegg.com/frc-robotics-dl.html"
+                       rel="bookmark"
+                       title="Permalink to (Data Cleaning) DL/ML in FRC Robotics Scouting/Strategy">
+                        (Data Cleaning) DL/ML in FRC Robotics Scouting/Strategy
+                    </a>
+                </h1>
+            </header>
+            <div class="entry-content">
+                <div class="panel">
+                    <div class="panel-body">
+<footer class="post-info">
+    <span class="label label-default">Date</span>
+    <span class="published">
+        <i class="fa fa-calendar"></i><time datetime="2018-10-25T12:13:00-07:00"> Thu 25 October 2018</time>
+    </span>
+
+
+
+
+
+<span class="label label-default">Tags</span>
+	<a href="https://waydegg.com/tag/personal-projects.html">personal projects</a>
+        /
+	<a href="https://waydegg.com/tag/robotics.html">robotics</a>
+        /
+	<a href="https://waydegg.com/tag/scouting.html">scouting</a>
+        /
+	<a href="https://waydegg.com/tag/deep-learning.html">deep learning</a>
+    
+</footer><!-- /.post-info -->                    </div>
+                </div>
+                <h2>Data Preparation</h2>
+<h3>Objective</h3>
+<p>Before doing any model training, we've got to gather our data. We have several data sets to work with: the match and overall team stats from TBA and the Scouting data provided by our team. With the data in its raw form, we'll have to clean it up so that the machine learning models can best train on the datasets. Getting rid of redundant columns, fixing mislabeled scouting data, and properly formatting column names will be a few of many changes needed to be made. After cleaning all our data, we'll need to merge our data sets to get better prediction accuracy and to speed up training time. Finally, after some preprocessing, our new cleaned and formatted dataset will be ready for Deep Learning.</p>
+<h3>Pulling TBA and Scouting Data</h3>
+<p>To start, let's import all of the necessary libraries we'll need:</p>
+<div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">os</span><span class="o">,</span> <span class="nn">json</span><span class="o">,</span> <span class="nn">pickle</span><span class="o">,</span> <span class="nn">requests</span><span class="o">,</span> <span class="nn">re</span><span class="o">,</span> <span class="nn">pdb</span>
+<span class="kn">from</span> <span class="nn">datetime</span> <span class="kn">import</span> <span class="n">datetime</span>
+
+<span class="kn">from</span> <span class="nn">fastai.structured</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="kn">from</span> <span class="nn">fastai.column_data</span> <span class="kn">import</span> <span class="o">*</span>
+
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+
+<span class="c1"># Always display all the columns</span>
+<span class="n">pd</span><span class="o">.</span><span class="n">set_option</span><span class="p">(</span><span class="s1">&#39;display.width&#39;</span><span class="p">,</span> <span class="mi">5000</span><span class="p">)</span>
+<span class="n">pd</span><span class="o">.</span><span class="n">set_option</span><span class="p">(</span><span class="s1">&#39;display.max_columns&#39;</span><span class="p">,</span> <span class="mi">160</span><span class="p">)</span>
+<span class="n">pd</span><span class="o">.</span><span class="n">set_option</span><span class="p">(</span><span class="s1">&#39;display.max_rows&#39;</span><span class="p">,</span> <span class="mi">1000</span><span class="p">)</span>
+
+<span class="o">%</span><span class="n">matplotlib</span> <span class="n">inline</span>
+</pre></div>
+
+
+<p>We'll be using several libraries commonly used in the Fast.ai courses as they're essential to helping pull and clean our raw datasets. Feel free to read up more on them on your own to learn more about their uses and capabilities. Towards the bottom is just some formatting options for when we view our datasets in the notebook.</p>
+<p>Next, we'll need our authentication keys to access the data we want. How The Blue Alliance api works is that each team is assigned a specific key to pull from their database, so when you sign up to make an account on their website you can request one. This is a pretty simple system, so we used the same idea for pulling data from RoboRecon.</p>
+<div class="highlight"><pre><span></span><span class="n">tba_read_api_key</span> <span class="o">=</span> <span class="s1">&#39;your_tba_api_key_here&#39;</span>
+<span class="n">rr_read_api_key</span> <span class="o">=</span> <span class="s1">&#39;your_roborecon_api_key_here&#39;</span>
+
+<span class="n">comp_yr</span> <span class="o">=</span> <span class="s1">&#39;2018&#39;</span>
+</pre></div>
+
+
+<p>Next we'll create some variables for our data file paths (imported as CSV files):</p>
+<div class="highlight"><pre><span></span><span class="n">tba_header</span> <span class="o">=</span> <span class="p">{</span> <span class="s1">&#39;X-TBA-Auth-Key&#39;</span><span class="p">:</span> <span class="n">tba_read_api_key</span> <span class="p">}</span>
+
+<span class="n">team_match_scores_file</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;data/</span><span class="si">{comp_yr}</span><span class="s1">-team-match-scores.csv&#39;</span>
+<span class="n">team_event_stats_file</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;data/</span><span class="si">{comp_yr}</span><span class="s1">-team-event-stats.csv&#39;</span>
+<span class="n">scouting_reports_file</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;data/</span><span class="si">{comp_yr}</span><span class="s1">-scouting-reports.csv&#39;</span>
+
+<span class="n">merged_file</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;data/</span><span class="si">{comp_yr}</span><span class="s1">-merged.csv&#39;</span>
+<span class="n">pp_file</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;data/</span><span class="si">{comp_yr}</span><span class="s1">-preprocessed.csv&#39;</span>
+</pre></div>
+
+
+<p>To have consistend column names, we'll write a function to convert all of them to snake casing:</p>
+<div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">camel_to_snake</span><span class="p">(</span><span class="n">val</span><span class="p">):</span>
+   <span class="n">s1</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="s1">&#39;(.)([A-Z][a-z]+)&#39;</span><span class="p">,</span> <span class="sa">r</span><span class="s1">&#39;\1_\2&#39;</span><span class="p">,</span> <span class="n">val</span><span class="p">)</span>
+   <span class="k">return</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="s1">&#39;([a-z0-9])([A-Z])&#39;</span><span class="p">,</span> <span class="sa">r</span><span class="s1">&#39;\1_\2&#39;</span><span class="p">,</span> <span class="n">s1</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+</pre></div>
+
+
+<h4>Getting All Events for the Competition Year</h4>
+<p>We'll be making a request to TBA for the events of the specified year (in this case, 2018) which will return a csv file of all the event stats. Checkout the <a href="https://www.thebluealliance.com/apidocs/v3">docs</a> for TBA api to learn more.</p>
+<div class="highlight"><pre><span></span><span class="c1"># get all events</span>
+<span class="n">r</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;https://www.thebluealliance.com/api/v3/events/</span><span class="si">{comp_yr}</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">headers</span><span class="o">=</span><span class="n">tba_header</span><span class="p">)</span>
+
+<span class="k">if</span> <span class="p">(</span><span class="n">r</span><span class="o">.</span><span class="n">status_code</span> <span class="o">==</span> <span class="mi">200</span><span class="p">):</span>
+   <span class="n">events</span> <span class="o">=</span> <span class="n">r</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
+</pre></div>
+
+
+<h4>Getting All Match Stats by Team per Event</h4>
+<p>To put it simply, we'll be downloading all of the latest match data from TBA:</p>
+<div class="highlight"><pre><span></span><span class="o">%%</span><span class="n">time</span>
+
+<span class="c1"># for each team, get all their match scores for the year</span>
+<span class="n">team_matches</span> <span class="o">=</span> <span class="p">[</span><span class="n">img</span><span class="p">]</span>
+
+<span class="c1"># keep track of playoff stats for each team as well; include in overall event/team stats below</span>
+<span class="n">team_playoff_stats</span> <span class="o">=</span> <span class="p">{}</span>
+
+<span class="k">for</span> <span class="n">ev</span> <span class="ow">in</span> <span class="n">events</span><span class="p">:</span>
+   <span class="c1"># ignore preseason and offseason</span>
+   <span class="k">if</span> <span class="p">(</span><span class="n">ev</span><span class="p">[</span><span class="s1">&#39;event_type&#39;</span><span class="p">]</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">99</span><span class="p">,</span> <span class="mi">100</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">]):</span> <span class="k">continue</span>  <span class="c1"># offseason, preseason, unlabeled</span>
+
+   <span class="c1"># print(&#39;Getting matches for event {0}&#39;.format(ev[&#39;key&#39;]))</span>
+
+   <span class="n">event_key</span> <span class="o">=</span> <span class="n">ev</span><span class="p">[</span><span class="s1">&#39;key&#39;</span><span class="p">]</span>
+   <span class="n">event_start</span> <span class="o">=</span> <span class="n">ev</span><span class="p">[</span><span class="s1">&#39;start_date&#39;</span><span class="p">]</span>
+   <span class="n">event_end</span> <span class="o">=</span> <span class="n">ev</span><span class="p">[</span><span class="s1">&#39;end_date&#39;</span><span class="p">]</span>
+   <span class="n">event_week</span> <span class="o">=</span> <span class="n">ev</span><span class="p">[</span><span class="s1">&#39;week&#39;</span><span class="p">]</span>
+
+   <span class="c1"># get event match scores</span>
+   <span class="n">r</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;https://www.thebluealliance.com/api/v3/event/</span><span class="si">{event_key}</span><span class="s1">/matches&#39;</span><span class="p">,</span> <span class="n">headers</span><span class="o">=</span><span class="n">tba_header</span><span class="p">)</span>
+
+   <span class="n">matches</span> <span class="o">=</span> <span class="n">r</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
+
+   <span class="k">for</span> <span class="n">match</span> <span class="ow">in</span> <span class="n">matches</span><span class="p">:</span>
+       <span class="c1"># get team keys for each alliance and a reference to their score breakdown</span>
+       <span class="n">blue_team_keys</span> <span class="o">=</span> <span class="n">match</span><span class="p">[</span><span class="s1">&#39;alliances&#39;</span><span class="p">][</span><span class="s1">&#39;blue&#39;</span><span class="p">][</span><span class="s1">&#39;team_keys&#39;</span><span class="p">]</span>
+       <span class="n">red_team_keys</span> <span class="o">=</span> <span class="n">match</span><span class="p">[</span><span class="s1">&#39;alliances&#39;</span><span class="p">][</span><span class="s1">&#39;red&#39;</span><span class="p">][</span><span class="s1">&#39;team_keys&#39;</span><span class="p">]</span>
+       <span class="n">all_team_keys</span> <span class="o">=</span> <span class="n">blue_team_keys</span> <span class="o">+</span> <span class="n">red_team_keys</span>
+
+       <span class="k">if</span> <span class="p">(</span><span class="n">match</span><span class="p">[</span><span class="s1">&#39;score_breakdown&#39;</span><span class="p">]</span> <span class="o">!=</span> <span class="kc">None</span><span class="p">):</span>
+           <span class="n">blue_score_breakdown</span> <span class="o">=</span> <span class="n">match</span><span class="p">[</span><span class="s1">&#39;score_breakdown&#39;</span><span class="p">][</span><span class="s1">&#39;blue&#39;</span><span class="p">]</span>
+           <span class="n">red_score_breakdown</span> <span class="o">=</span> <span class="n">match</span><span class="p">[</span><span class="s1">&#39;score_breakdown&#39;</span><span class="p">][</span><span class="s1">&#39;red&#39;</span><span class="p">]</span>
+
+       <span class="k">for</span> <span class="n">team</span> <span class="ow">in</span> <span class="n">all_team_keys</span><span class="p">:</span>
+           <span class="k">if</span> <span class="p">(</span><span class="n">team</span> <span class="ow">in</span> <span class="n">blue_team_keys</span><span class="p">):</span>
+               <span class="n">alliance</span> <span class="o">=</span> <span class="s1">&#39;blue&#39;</span>
+               <span class="n">opp_alliance</span> <span class="o">=</span> <span class="s1">&#39;red&#39;</span>
+               <span class="n">alliance_team_keys</span> <span class="o">=</span> <span class="p">[</span> <span class="n">k</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">blue_team_keys</span> <span class="k">if</span> <span class="p">(</span><span class="n">k</span> <span class="o">!=</span> <span class="n">team</span><span class="p">)</span> <span class="p">]</span>
+           <span class="k">else</span><span class="p">:</span>
+               <span class="n">alliance</span> <span class="o">=</span> <span class="s1">&#39;red&#39;</span>
+               <span class="n">opp_alliance</span> <span class="o">=</span> <span class="s1">&#39;blue&#39;</span>
+               <span class="n">alliance_team_keys</span> <span class="o">=</span> <span class="p">[</span> <span class="n">k</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">red_team_keys</span> <span class="k">if</span> <span class="p">(</span><span class="n">k</span> <span class="o">!=</span> <span class="n">team</span><span class="p">)</span> <span class="p">]</span>
+
+           <span class="c1"># add team match data</span>
+           <span class="n">team_match</span> <span class="o">=</span> <span class="p">{</span>
+               <span class="s1">&#39;year&#39;</span><span class="p">:</span> <span class="n">comp_yr</span><span class="p">,</span>
+               <span class="s1">&#39;event_key&#39;</span><span class="p">:</span> <span class="n">event_key</span><span class="p">,</span>
+               <span class="s1">&#39;event_week&#39;</span><span class="p">:</span> <span class="n">event_week</span><span class="p">,</span>
+               <span class="s1">&#39;match_key&#39;</span><span class="p">:</span> <span class="n">match</span><span class="p">[</span><span class="s1">&#39;key&#39;</span><span class="p">],</span>
+               <span class="s1">&#39;team_key&#39;</span><span class="p">:</span> <span class="n">team</span><span class="p">,</span>
+               <span class="s1">&#39;match_number&#39;</span><span class="p">:</span> <span class="n">match</span><span class="p">[</span><span class="s1">&#39;match_number&#39;</span><span class="p">],</span>
+               <span class="s1">&#39;set_number&#39;</span><span class="p">:</span> <span class="n">match</span><span class="p">[</span><span class="s1">&#39;set_number&#39;</span><span class="p">],</span>
+               <span class="s1">&#39;comp_level&#39;</span><span class="p">:</span> <span class="n">match</span><span class="p">[</span><span class="s1">&#39;comp_level&#39;</span><span class="p">],</span>
+               <span class="s1">&#39;time&#39;</span><span class="p">:</span> <span class="n">match</span><span class="p">[</span><span class="s1">&#39;time&#39;</span><span class="p">],</span>
+               <span class="s1">&#39;actual_time&#39;</span><span class="p">:</span> <span class="n">match</span><span class="p">[</span><span class="s1">&#39;actual_time&#39;</span><span class="p">],</span>
+               <span class="s1">&#39;predicted_time&#39;</span><span class="p">:</span> <span class="n">match</span><span class="p">[</span><span class="s1">&#39;predicted_time&#39;</span><span class="p">],</span>
+               <span class="s1">&#39;post_result_time&#39;</span><span class="p">:</span> <span class="n">match</span><span class="p">[</span><span class="s1">&#39;post_result_time&#39;</span><span class="p">],</span>
+               <span class="s1">&#39;score&#39;</span><span class="p">:</span> <span class="n">match</span><span class="p">[</span><span class="s1">&#39;alliances&#39;</span><span class="p">][</span><span class="n">alliance</span><span class="p">][</span><span class="s1">&#39;score&#39;</span><span class="p">],</span>
+               <span class="s1">&#39;is_winner&#39;</span><span class="p">:</span> <span class="mi">1</span> <span class="k">if</span> <span class="p">(</span><span class="n">match</span><span class="p">[</span><span class="s1">&#39;winning_alliance&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="n">alliance</span><span class="p">)</span> <span class="k">else</span> <span class="mi">0</span><span class="p">,</span>
+               <span class="s1">&#39;alliance&#39;</span><span class="p">:</span> <span class="n">alliance</span><span class="p">,</span>
+               <span class="s1">&#39;alliance_robot_pos&#39;</span><span class="p">:</span> <span class="n">match</span><span class="p">[</span><span class="s1">&#39;alliances&#39;</span><span class="p">][</span><span class="n">alliance</span><span class="p">][</span><span class="s1">&#39;team_keys&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">team</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span>
+               <span class="s1">&#39;alliance_team_keys&#39;</span><span class="p">:</span> <span class="n">alliance_team_keys</span><span class="p">,</span>
+               <span class="s1">&#39;winning_margin&#39;</span><span class="p">:</span> <span class="n">match</span><span class="p">[</span><span class="s1">&#39;alliances&#39;</span><span class="p">][</span><span class="n">alliance</span><span class="p">][</span><span class="s1">&#39;score&#39;</span><span class="p">]</span> <span class="o">-</span> <span class="n">match</span><span class="p">[</span><span class="s1">&#39;alliances&#39;</span><span class="p">][</span><span class="n">opp_alliance</span><span class="p">][</span><span class="s1">&#39;score&#39;</span><span class="p">]</span>
+           <span class="p">}</span>
+
+           <span class="c1"># include score breakdown</span>
+           <span class="k">if</span> <span class="p">(</span><span class="n">match</span><span class="p">[</span><span class="s1">&#39;score_breakdown&#39;</span><span class="p">]</span> <span class="o">!=</span> <span class="kc">None</span><span class="p">):</span>
+               <span class="k">if</span> <span class="p">(</span><span class="n">alliance</span> <span class="o">==</span> <span class="s1">&#39;blue&#39;</span><span class="p">):</span>
+                   <span class="n">team_match</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">blue_score_breakdown</span><span class="p">)</span>
+               <span class="k">else</span><span class="p">:</span>
+                   <span class="n">team_match</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">red_score_breakdown</span><span class="p">)</span>
+
+           <span class="n">team_matches</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">team_match</span><span class="p">)</span>
+
+           <span class="c1"># add playoff stats data</span>
+           <span class="n">team_event_key</span> <span class="o">=</span> <span class="n">team_match</span><span class="p">[</span><span class="s1">&#39;team_key&#39;</span><span class="p">]</span> <span class="o">+</span> <span class="s1">&#39;_&#39;</span> <span class="o">+</span> <span class="n">team_match</span><span class="p">[</span><span class="s1">&#39;event_key&#39;</span><span class="p">]</span>
+
+           <span class="k">if</span> <span class="p">(</span><span class="n">team_event_key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">team_playoff_stats</span><span class="p">):</span>
+               <span class="n">team_playoff_stats</span><span class="p">[</span><span class="n">team_event_key</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+                   <span class="s1">&#39;team_key&#39;</span><span class="p">:</span> <span class="n">team_match</span><span class="p">[</span><span class="s1">&#39;team_key&#39;</span><span class="p">],</span>
+                   <span class="s1">&#39;event_key&#39;</span><span class="p">:</span> <span class="n">team_match</span><span class="p">[</span><span class="s1">&#39;event_key&#39;</span><span class="p">],</span>
+                   <span class="s1">&#39;is_playoff_team&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+                   <span class="s1">&#39;is_finals_team&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+                   <span class="s1">&#39;post_qual_wins&#39;</span><span class="p">:</span> <span class="mi">0</span>
+               <span class="p">}</span>
+
+           <span class="c1"># comp_level = [ qm, ef, qf, sf, f ]</span>
+           <span class="k">if</span> <span class="p">(</span><span class="n">team_match</span><span class="p">[</span><span class="s1">&#39;comp_level&#39;</span><span class="p">]</span> <span class="o">!=</span> <span class="s1">&#39;qm&#39;</span><span class="p">):</span>
+               <span class="n">team_playoff_stats</span><span class="p">[</span><span class="n">team_event_key</span><span class="p">][</span><span class="s1">&#39;is_playoff_team&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+
+               <span class="k">if</span> <span class="p">(</span><span class="n">team_match</span><span class="p">[</span><span class="s1">&#39;is_winner&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span><span class="p">):</span>
+                   <span class="n">team_playoff_stats</span><span class="p">[</span><span class="n">team_event_key</span><span class="p">][</span><span class="s1">&#39;post_qual_wins&#39;</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
+
+               <span class="k">if</span> <span class="p">(</span><span class="n">team_match</span><span class="p">[</span><span class="s1">&#39;comp_level&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;f&#39;</span><span class="p">):</span> <span class="n">team_playoff_stats</span><span class="p">[</span><span class="n">team_event_key</span><span class="p">][</span><span class="s1">&#39;is_finals_team&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+
+<span class="c1"># sort team matches by startdate (earliest to most recent)</span>
+<span class="n">team_matches</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">team_matches</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="p">[</span><span class="s1">&#39;time&#39;</span><span class="p">]</span> <span class="k">if</span> <span class="n">x</span><span class="p">[</span><span class="s1">&#39;actual_time&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">x</span><span class="p">[</span><span class="s1">&#39;actual_time&#39;</span><span class="p">])</span>
+</pre></div>
+
+
+<p>Ok, this is a lot of code but let's step through it:</p>
+<ol>
+<li>First we decide what events we want to pull and rename a few columns so that they'll make more sense. Then we'll make another request to TBA for their match data per event.</li>
+<li>We'll look through every match in every event and start grouping them by team_key. We'll create new columns for the new team-specific dataset we're creating, and rename columns so they make more sense.</li>
+<li>Then we'll add in columns for playoff match data for each team.</li>
+</ol>
+<p>Next we're going to convert our formatted match data frame into a pandas dataframe, clean the data, and convert it to a csv. This part will change every year depending on the competition. See the FIRST API and TBA API docs on how they are coding different scoring elements.</p>
+<div class="highlight"><pre><span></span><span class="n">matches_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">team_matches</span><span class="p">)</span>
+<span class="n">matches_df</span><span class="o">.</span><span class="n">head</span><span class="p">(</span><span class="mi">10</span><span class="p">)</span>
+</pre></div>
+
+
+<p><img alt="img" src="images/scouting_app/jnb_1.png"></p>
+<p>Here's what the match dataframe for each team looks like. There are a few columns we'll want to clean up so that our data makes more sense for our machine learning algorithms, so let's get to it.</p>
+<div class="highlight"><pre><span></span><span class="c1"># map autonomous to 1 or 0</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">matches_df</span><span class="o">.</span><span class="n">autoRobot1</span><span class="o">.</span><span class="n">unique</span><span class="p">(),</span> <span class="n">matches_df</span><span class="o">.</span><span class="n">autoRobot2</span><span class="o">.</span><span class="n">unique</span><span class="p">(),</span> <span class="n">matches_df</span><span class="o">.</span><span class="n">autoRobot3</span><span class="o">.</span><span class="n">unique</span><span class="p">())</span>
+<span class="n">robotAutoMap</span> <span class="o">=</span> <span class="p">{</span> <span class="s1">&#39;AutoRun&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;None&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;Unknown&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">:</span> <span class="mi">0</span> <span class="p">}</span>
+
+<span class="n">matches_df</span><span class="o">.</span><span class="n">autoRobot1</span> <span class="o">=</span> <span class="n">matches_df</span><span class="o">.</span><span class="n">autoRobot1</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">robotAutoMap</span><span class="p">)</span>
+<span class="n">matches_df</span><span class="o">.</span><span class="n">autoRobot2</span> <span class="o">=</span> <span class="n">matches_df</span><span class="o">.</span><span class="n">autoRobot2</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">robotAutoMap</span><span class="p">)</span>
+<span class="n">matches_df</span><span class="o">.</span><span class="n">autoRobot3</span> <span class="o">=</span> <span class="n">matches_df</span><span class="o">.</span><span class="n">autoRobot3</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">robotAutoMap</span><span class="p">)</span>
+</pre></div>
+
+
+<p>For the columns 'autoRobot1', 'autoRobot2', and 'autoRobot3' tell us which robot on a particular alliance did something in the Autonomous period of the match or not. The values TBA gives us is 'AutoRun' or 'None'. These values can and should be 0 or 1 values, so that's what we change them to.</p>
+<div class="highlight"><pre><span></span><span class="c1"># map endgame scores (note: levitate is randomly assigned to a team)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">matches_df</span><span class="o">.</span><span class="n">endgameRobot1</span><span class="o">.</span><span class="n">unique</span><span class="p">(),</span> <span class="n">matches_df</span><span class="o">.</span><span class="n">endgameRobot2</span><span class="o">.</span><span class="n">unique</span><span class="p">(),</span> <span class="n">matches_df</span><span class="o">.</span><span class="n">endgameRobot3</span><span class="o">.</span><span class="n">unique</span><span class="p">())</span>
+<span class="n">endgameMap</span> <span class="o">=</span> <span class="p">{</span> <span class="s1">&#39;Parking&#39;</span><span class="p">:</span> <span class="s1">&#39;Parking&#39;</span><span class="p">,</span> <span class="s1">&#39;Climbing&#39;</span><span class="p">:</span> <span class="s1">&#39;Climbing&#39;</span><span class="p">,</span> <span class="s1">&#39;Levitate&#39;</span><span class="p">:</span> <span class="s1">&#39;Levitate&#39;</span><span class="p">,</span> <span class="s1">&#39;None&#39;</span><span class="p">:</span> <span class="s1">&#39;None&#39;</span><span class="p">,</span> <span class="s1">&#39;Unknown&#39;</span><span class="p">:</span> <span class="s1">&#39;None&#39;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">:</span> <span class="s1">&#39;None&#39;</span> <span class="p">}</span>
+
+<span class="n">matches_df</span><span class="o">.</span><span class="n">endgameRobot1</span> <span class="o">=</span> <span class="n">matches_df</span><span class="o">.</span><span class="n">endgameRobot1</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">endgameMap</span><span class="p">)</span>
+<span class="n">matches_df</span><span class="o">.</span><span class="n">endgameRobot2</span> <span class="o">=</span> <span class="n">matches_df</span><span class="o">.</span><span class="n">endgameRobot2</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">endgameMap</span><span class="p">)</span>
+<span class="n">matches_df</span><span class="o">.</span><span class="n">endgameRobot3</span> <span class="o">=</span> <span class="n">matches_df</span><span class="o">.</span><span class="n">endgameRobot3</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">endgameMap</span><span class="p">)</span>
+</pre></div>
+
+
+<p>Here we are making the columns regarding alliance endgame scoring more clear. TBA has their data where the 'Levitate' element is assigned to a random team, even though it really applies to the whole alliance. Since this is alliance-wide data we want to assign for each team, the endgameRobot columns should be able to contain multiple endgame values.</p>
+<div class="highlight"><pre><span></span><span class="c1"># this will cover any other convertible columns (will make them floats by default)</span>
+<span class="n">matches_df</span> <span class="o">=</span> <span class="n">matches_df</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">pd</span><span class="o">.</span><span class="n">to_numeric</span><span class="p">,</span> <span class="n">errors</span><span class="o">=</span><span class="s1">&#39;ignore&#39;</span><span class="p">)</span>
+
+<span class="c1"># convert NaNs to 0</span>
+<span class="n">matches_df</span><span class="o">.</span><span class="n">fillna</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+<span class="c1"># event_week starts at 0 .. so add 1</span>
+<span class="n">matches_df</span><span class="o">.</span><span class="n">event_week</span> <span class="o">=</span> <span class="n">matches_df</span><span class="o">.</span><span class="n">event_week</span> <span class="o">+</span> <span class="mi">1</span>
+
+<span class="c1"># convert count and boolean columns to int</span>
+<span class="n">bool_cols</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;autoQuestRankingPoint&#39;</span><span class="p">,</span> <span class="s1">&#39;autoSwitchAtZero&#39;</span><span class="p">,</span> <span class="s1">&#39;faceTheBossRankingPoint&#39;</span><span class="p">]</span>
+
+<span class="n">matches_df</span><span class="p">[</span><span class="n">bool_cols</span><span class="p">]</span> <span class="o">=</span> <span class="n">matches_df</span><span class="p">[</span><span class="n">bool_cols</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+</pre></div>
+
+
+<p>We're doing some more cleaning in our dataset to feed it into our ML algorithms. Having NaN values in places where they shouldn't be and wrong data types can give you errors when you start training your models.</p>
+<p>Next, let's do some feature engineering to simplify our dataframe a little. Some of the columns in our data are redundant or aren't very clear on what they're representing, so let's fix that.</p>
+<div class="highlight"><pre><span></span><span class="c1"># create additional columns that aggregate others</span>
+<span class="n">matches_df</span><span class="p">[</span><span class="s1">&#39;autoRobotRunCount&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">matches_df</span><span class="p">[</span><span class="s1">&#39;autoRobot1&#39;</span><span class="p">]</span> <span class="o">+</span> <span class="n">matches_df</span><span class="p">[</span><span class="s1">&#39;autoRobot2&#39;</span><span class="p">]</span> <span class="o">+</span> <span class="n">matches_df</span><span class="p">[</span><span class="s1">&#39;autoRobot3&#39;</span><span class="p">]</span>
+<span class="n">matches_df</span><span class="p">[</span><span class="s1">&#39;endgameRobotClimbCount&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">matches_df</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="k">lambda</span> <span class="n">r</span><span class="p">:</span> <span class="p">(</span><span class="n">r</span><span class="p">[</span><span class="s1">&#39;endgameRobot1&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;Climbing&#39;</span><span class="p">)</span> <span class="o">+</span> <span class="p">(</span><span class="n">r</span><span class="p">[</span><span class="s1">&#39;endgameRobot2&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;Climbing&#39;</span><span class="p">)</span> <span class="o">+</span> <span class="p">(</span><span class="n">r</span><span class="p">[</span><span class="s1">&#39;endgameRobot3&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;Climbing&#39;</span><span class="p">),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span> <span class="n">having</span> <span class="n">Roborecon</span> <span class="k">for</span> <span class="mi">2</span> <span class="n">years</span> <span class="k">with</span> <span class="n">its</span> <span class="n">benefits</span> <span class="n">clearly</span> <span class="n">paying</span> <span class="n">off</span><span class="p">,</span> <span class="n">I</span> <span class="n">wanted</span> <span class="n">to</span> <span class="n">see</span> <span class="k">if</span> <span class="n">we</span> <span class="n">could</span> <span class="n">push</span> <span class="n">our</span> <span class="n">scouting</span> <span class="n">abilities</span> <span class="n">even</span> <span class="n">further</span><span class="o">.</span> <span class="n">I</span> <span class="n">had</span> <span class="n">been</span> <span class="n">hearing</span> <span class="n">about</span> <span class="n">how</span> <span class="n">FRC</span> <span class="n">teams</span> <span class="n">are</span> <span class="n">starting</span> <span class="n">to</span> <span class="n">use</span> <span class="n">machine</span> <span class="n">learning</span> <span class="ow">in</span> <span class="n">their</span> <span class="n">vision</span> <span class="n">software</span> <span class="ow">and</span> <span class="n">autonomous</span> <span class="n">routines</span><span class="p">,</span> <span class="ow">and</span> <span class="n">I</span> <span class="n">was</span> <span class="n">interested</span> <span class="n">to</span> <span class="n">see</span> <span class="k">if</span> <span class="n">I</span> <span class="n">could</span> <span class="n">apply</span> <span class="n">ML</span><span class="o">/</span><span class="n">DL</span> <span class="n">to</span> <span class="n">scouting</span> <span class="n">data</span> <span class="ow">and</span> <span class="n">get</span> <span class="n">accurate</span> <span class="n">predictions</span><span class="o">.</span> <span class="n">I</span> <span class="n">had</span> <span class="n">already</span> <span class="n">gone</span> <span class="n">through</span> <span class="p">[</span><span class="n">Andrew</span> <span class="n">Ng</span><span class="s1">&#39;s &quot;Machine Learning&quot;](https://www.coursera.org/learn/machine-learning) course and had just started going through [Fastai&#39;</span><span class="n">s</span> <span class="n">Practical</span> <span class="n">Deep</span> <span class="n">Learning</span> <span class="k">for</span> <span class="n">Coders</span> <span class="n">Part</span> <span class="mi">1</span><span class="p">](</span><span class="n">fast</span><span class="o">.</span><span class="n">ai</span><span class="p">),</span> <span class="n">so</span> <span class="n">I</span> <span class="n">was</span> <span class="n">still</span> <span class="n">very</span> <span class="n">new</span> <span class="n">to</span> <span class="n">this</span> <span class="n">field</span><span class="o">.</span>
+
+<span class="n">As</span> <span class="n">it</span> <span class="n">turns</span> <span class="n">out</span><span class="p">,</span> <span class="n">yes</span><span class="p">,</span> <span class="n">you</span> <span class="n">can</span> <span class="n">use</span> <span class="n">Deep</span> <span class="n">Learning</span> <span class="ow">in</span> <span class="n">FRC</span> <span class="n">scouting</span><span class="o">.</span> <span class="n">There</span> <span class="n">are</span> <span class="n">tons</span> <span class="n">of</span> <span class="n">areas</span> <span class="n">it</span> <span class="n">can</span> <span class="n">be</span> <span class="n">used</span> <span class="ow">in</span><span class="o">.</span> <span class="n">My</span> <span class="n">scouting</span> <span class="n">team</span> <span class="ow">and</span> <span class="n">I</span> <span class="n">determined</span> <span class="n">a</span> <span class="nb">list</span> <span class="n">of</span> <span class="n">uses</span> <span class="k">for</span> <span class="n">the</span> <span class="n">ML</span> <span class="n">analysis</span> <span class="n">that</span> <span class="n">could</span> <span class="n">potentially</span> <span class="n">change</span> <span class="n">the</span> <span class="n">way</span> <span class="n">we</span> <span class="n">perform</span> <span class="n">at</span> <span class="n">competitions</span> <span class="n">completely</span><span class="p">:</span>
+
+<span class="mf">1.</span> <span class="n">Correcting</span> <span class="n">human</span> <span class="n">error</span><span class="o">.</span> <span class="n">When</span> <span class="n">you</span><span class="s1">&#39;re forcing the limited number of unwilling Freshmen on your team to scout during competition, they&#39;</span><span class="n">re</span> <span class="n">going</span> <span class="n">to</span> <span class="n">mislabel</span> <span class="n">data</span> <span class="ow">and</span> <span class="n">entirely</span> <span class="n">forget</span> <span class="n">to</span> <span class="n">scout</span> <span class="n">some</span> <span class="n">matches</span><span class="o">.</span> <span class="n">Early</span> <span class="ow">in</span> <span class="n">the</span> <span class="n">season</span> <span class="n">when</span> <span class="n">we</span> <span class="n">start</span> <span class="n">out</span> <span class="k">with</span> <span class="n">having</span> <span class="n">no</span> <span class="n">data</span> <span class="kn">from</span> <span class="nn">teams</span> <span class="k">for</span> <span class="n">that</span> <span class="n">year</span><span class="p">,</span> <span class="n">it</span><span class="s1">&#39;s critical that we correctly record how they&#39;</span><span class="n">re</span> <span class="n">performing</span> <span class="n">during</span> <span class="n">the</span> <span class="mi">8</span><span class="o">-</span><span class="mi">11</span> <span class="n">qualification</span> <span class="n">matches</span> <span class="n">they</span> <span class="n">get</span> <span class="n">before</span> <span class="n">alliance</span> <span class="n">selections</span> <span class="ow">or</span> <span class="n">we</span> <span class="n">might</span> <span class="n">miss</span> <span class="n">pick</span> <span class="n">a</span> <span class="n">team</span> <span class="ow">and</span> <span class="n">jeopardize</span> <span class="n">our</span> <span class="n">entire</span> <span class="n">season</span><span class="o">.</span>
+
+<span class="mf">2.</span> <span class="n">Predicting</span> <span class="n">match</span> <span class="ow">and</span> <span class="n">event</span> <span class="n">outcomes</span> <span class="n">before</span> <span class="n">they</span><span class="s1">&#39;ve happened. There are thousands of FRC teams with hundreds competing simultaneously during competition season, so the only way we could scout all of them is with the help of ML algorithms. Going into the Turing Division in 2018 at the Houston World Championships we already had match predictions and team specific stats for the 67 teams attending, most of which we had never seen compete, thanks to Deep Learning.</span>
+
+<span class="mf">3.</span> <span class="n">Revealing</span> <span class="n">missed</span> <span class="n">important</span> <span class="n">match</span> <span class="ow">and</span> <span class="n">team</span> <span class="n">data</span><span class="o">.</span> <span class="n">From</span> <span class="n">using</span> <span class="n">the</span> <span class="n">Roborecon</span> <span class="n">web</span> <span class="n">app</span> <span class="ow">in</span> <span class="n">the</span> <span class="n">past</span><span class="p">,</span> <span class="n">we</span><span class="s1">&#39;d discovered certain robot attributes that we thought mattered were irrelevant, and others we thought weren&#39;</span><span class="n">t</span> <span class="n">that</span> <span class="n">important</span> <span class="n">actually</span> <span class="n">mattered</span> <span class="n">a</span> <span class="n">lot</span><span class="o">.</span> <span class="n">Implementing</span> <span class="n">deep</span> <span class="n">learning</span> <span class="n">into</span> <span class="n">our</span> <span class="n">scouting</span> <span class="n">application</span> <span class="n">would</span> <span class="n">only</span> <span class="n">further</span> <span class="n">these</span> <span class="n">discoveries</span><span class="o">.</span>
+
+<span class="n">I</span><span class="s1">&#39;m going to assume you have a basic understanding of Python, [Jupyter Notebooks](http://jupyter.org), and ML/DL as I go into detail on my code and how I put everything together in this section of the writeup. Feel free to contact me with any questions or help for getting world class predictions on your own scouting data because really anyone can do this. As RoboRecon is proprietary software to Team Paradox, I&#39;</span><span class="n">ll</span> <span class="n">be</span> <span class="n">highlighting</span> <span class="n">what</span> <span class="n">code</span> <span class="n">we</span> <span class="n">presented</span> <span class="n">at</span> <span class="n">the</span> <span class="mi">2018</span> <span class="n">Houston</span> <span class="n">World</span> <span class="n">Championships</span> <span class="n">that</span> <span class="n">we</span> <span class="n">made</span> <span class="n">public</span><span class="o">.</span>
+
+<span class="o">---</span>
+
+<span class="n">This</span> <span class="n">ended</span> <span class="n">up</span> <span class="n">being</span> <span class="n">a</span> <span class="n">pretty</span> <span class="n">comprehensive</span> <span class="n">write</span> <span class="n">up</span><span class="p">,</span> <span class="n">so</span> <span class="n">the</span> <span class="n">Data</span> <span class="n">Cleaning</span> <span class="ow">and</span> <span class="n">Machine</span> <span class="n">Learning</span><span class="o">/</span><span class="n">Deep</span> <span class="n">Learning</span> <span class="n">sections</span> <span class="n">are</span> <span class="n">split</span> <span class="n">into</span> <span class="n">two</span> <span class="n">separate</span> <span class="n">pages</span><span class="p">:</span>
+
+<span class="c1">## [Data Cleaning](/frc-robotics-dl.html)</span>
+
+<span class="c1">## Machine Learning/Deep Learning (Coming Soon)</span>
+ <span class="n">having</span> <span class="n">Roborecon</span> <span class="k">for</span> <span class="mi">2</span> <span class="n">years</span> <span class="k">with</span> <span class="n">its</span> <span class="n">benefits</span> <span class="n">clearly</span> <span class="n">paying</span> <span class="n">off</span><span class="p">,</span> <span class="n">I</span> <span class="n">wanted</span> <span class="n">to</span> <span class="n">see</span> <span class="k">if</span> <span class="n">we</span> <span class="n">could</span> <span class="n">push</span> <span class="n">our</span> <span class="n">scouting</span> <span class="n">abilities</span> <span class="n">even</span> <span class="n">further</span><span class="o">.</span> <span class="n">I</span> <span class="n">had</span> <span class="n">been</span> <span class="n">hearing</span> <span class="n">about</span> <span class="n">how</span> <span class="n">FRC</span> <span class="n">teams</span> <span class="n">are</span> <span class="n">starting</span> <span class="n">to</span> <span class="n">use</span> <span class="n">machine</span> <span class="n">learning</span> <span class="ow">in</span> <span class="n">their</span> <span class="n">vision</span> <span class="n">software</span> <span class="ow">and</span> <span class="n">autonomous</span> <span class="n">routines</span><span class="p">,</span> <span class="ow">and</span> <span class="n">I</span> <span class="n">was</span> <span class="n">interested</span> <span class="n">to</span> <span class="n">see</span> <span class="k">if</span> <span class="n">I</span> <span class="n">could</span> <span class="n">apply</span> <span class="n">ML</span><span class="o">/</span><span class="n">DL</span> <span class="n">to</span> <span class="n">scouting</span> <span class="n">data</span> <span class="ow">and</span> <span class="n">get</span> <span class="n">accurate</span> <span class="n">predictions</span><span class="o">.</span> <span class="n">I</span> <span class="n">had</span> <span class="n">already</span> <span class="n">gone</span> <span class="n">through</span> <span class="p">[</span><span class="n">Andrew</span> <span class="n">Ng</span><span class="s1">&#39;s &quot;Machine Learning&quot;](https://www.coursera.org/learn/machine-learning) course and had just started going through [Fastai&#39;</span><span class="n">s</span> <span class="n">Practical</span> <span class="n">Deep</span> <span class="n">Learning</span> <span class="k">for</span> <span class="n">Coders</span> <span class="n">Part</span> <span class="mi">1</span><span class="p">](</span><span class="n">fast</span><span class="o">.</span><span class="n">ai</span><span class="p">),</span> <span class="n">so</span> <span class="n">I</span> <span class="n">was</span> <span class="n">still</span> <span class="n">very</span> <span class="n">new</span> <span class="n">to</span> <span class="n">this</span> <span class="n">field</span><span class="o">.</span>
+
+<span class="n">As</span> <span class="n">it</span> <span class="n">turns</span> <span class="n">out</span><span class="p">,</span> <span class="n">yes</span><span class="p">,</span> <span class="n">you</span> <span class="n">can</span> <span class="n">use</span> <span class="n">Deep</span> <span class="n">Learning</span> <span class="ow">in</span> <span class="n">FRC</span> <span class="n">scouting</span><span class="o">.</span> <span class="n">There</span> <span class="n">are</span> <span class="n">tons</span> <span class="n">of</span> <span class="n">areas</span> <span class="n">it</span> <span class="n">can</span> <span class="n">be</span> <span class="n">used</span> <span class="ow">in</span><span class="o">.</span> <span class="n">My</span> <span class="n">scouting</span> <span class="n">team</span> <span class="ow">and</span> <span class="n">I</span> <span class="n">determined</span> <span class="n">a</span> <span class="nb">list</span> <span class="n">of</span> <span class="n">uses</span> <span class="k">for</span> <span class="n">the</span> <span class="n">ML</span> <span class="n">analysis</span> <span class="n">that</span> <span class="n">could</span> <span class="n">potentially</span> <span class="n">change</span> <span class="n">the</span> <span class="n">way</span> <span class="n">we</span> <span class="n">perform</span> <span class="n">at</span> <span class="n">competitions</span> <span class="n">completely</span><span class="p">:</span>
+
+<span class="mf">1.</span> <span class="n">Correcting</span> <span class="n">human</span> <span class="n">error</span><span class="o">.</span> <span class="n">When</span> <span class="n">you</span><span class="s1">&#39;re forcing the limited number of unwilling Freshmen on your team to scout during competition, they&#39;</span><span class="n">re</span> <span class="n">going</span> <span class="n">to</span> <span class="n">mislabel</span> <span class="n">data</span> <span class="ow">and</span> <span class="n">entirely</span> <span class="n">forget</span> <span class="n">to</span> <span class="n">scout</span> <span class="n">some</span> <span class="n">matches</span><span class="o">.</span> <span class="n">Early</span> <span class="ow">in</span> <span class="n">the</span> <span class="n">season</span> <span class="n">when</span> <span class="n">we</span> <span class="n">start</span> <span class="n">out</span> <span class="k">with</span> <span class="n">having</span> <span class="n">no</span> <span class="n">data</span> <span class="kn">from</span> <span class="nn">teams</span> <span class="k">for</span> <span class="n">that</span> <span class="n">year</span><span class="p">,</span> <span class="n">it</span><span class="s1">&#39;s critical that we correctly record how they&#39;</span><span class="n">re</span> <span class="n">performing</span> <span class="n">during</span> <span class="n">the</span> <span class="mi">8</span><span class="o">-</span><span class="mi">11</span> <span class="n">qualification</span> <span class="n">matches</span> <span class="n">they</span> <span class="n">get</span> <span class="n">before</span> <span class="n">alliance</span> <span class="n">selections</span> <span class="ow">or</span> <span class="n">we</span> <span class="n">might</span> <span class="n">miss</span> <span class="n">pick</span> <span class="n">a</span> <span class="n">team</span> <span class="ow">and</span> <span class="n">jeopardize</span> <span class="n">our</span> <span class="n">entire</span> <span class="n">season</span><span class="o">.</span>
+
+<span class="mf">2.</span> <span class="n">Predicting</span> <span class="n">match</span> <span class="ow">and</span> <span class="n">event</span> <span class="n">outcomes</span> <span class="n">before</span> <span class="n">they</span><span class="s1">&#39;ve happened. There are thousands of FRC teams with hundreds competing simultaneously during competition season, so the only way we could scout all of them is with the help of ML algorithms. Going into the Turing Division in 2018 at the Houston World Championships we already had match predictions and team specific stats for the 67 teams attending, most of which we had never seen compete, thanks to Deep Learning.</span>
+
+<span class="mf">3.</span> <span class="n">Revealing</span> <span class="n">missed</span> <span class="n">important</span> <span class="n">match</span> <span class="ow">and</span> <span class="n">team</span> <span class="n">data</span><span class="o">.</span> <span class="n">From</span> <span class="n">using</span> <span class="n">the</span> <span class="n">Roborecon</span> <span class="n">web</span> <span class="n">app</span> <span class="ow">in</span> <span class="n">the</span> <span class="n">past</span><span class="p">,</span> <span class="n">we</span><span class="s1">&#39;d discovered certain robot attributes that we thought mattered were irrelevant, and others we thought weren&#39;</span><span class="n">t</span> <span class="n">that</span> <span class="n">important</span> <span class="n">actually</span> <span class="n">mattered</span> <span class="n">a</span> <span class="n">lot</span><span class="o">.</span> <span class="n">Implementing</span> <span class="n">deep</span> <span class="n">learning</span> <span class="n">into</span> <span class="n">our</span> <span class="n">scouting</span> <span class="n">application</span> <span class="n">would</span> <span class="n">only</span> <span class="n">further</span> <span class="n">these</span> <span class="n">discoveries</span><span class="o">.</span>
+
+<span class="n">I</span><span class="s1">&#39;m going to assume you have a basic understanding of Python, [Jupyter Notebooks](http://jupyter.org), and ML/DL as I go into detail on my code and how I put everything together in this section of the writeup. Feel free to contact me with any questions or help for getting world class predictions on your own scouting data because really anyone can do this. As RoboRecon is proprietary software to Team Paradox, I&#39;</span><span class="n">ll</span> <span class="n">be</span> <span class="n">highlighting</span> <span class="n">what</span> <span class="n">code</span> <span class="n">we</span> <span class="n">presented</span> <span class="n">at</span> <span class="n">the</span> <span class="mi">2018</span> <span class="n">Houston</span> <span class="n">World</span> <span class="n">Championships</span> <span class="n">that</span> <span class="n">we</span> <span class="n">made</span> <span class="n">public</span><span class="o">.</span>
+
+<span class="o">---</span>
+
+<span class="n">This</span> <span class="n">ended</span> <span class="n">up</span> <span class="n">being</span> <span class="n">a</span> <span class="n">pretty</span> <span class="n">comprehensive</span> <span class="n">write</span> <span class="n">up</span><span class="p">,</span> <span class="n">so</span> <span class="n">the</span> <span class="n">Data</span> <span class="n">Cleaning</span> <span class="ow">and</span> <span class="n">Machine</span> <span class="n">Learning</span><span class="o">/</span><span class="n">Deep</span> <span class="n">Learning</span> <span class="n">sections</span> <span class="n">are</span> <span class="n">split</span> <span class="n">into</span> <span class="n">two</span> <span class="n">separate</span> <span class="n">pages</span><span class="p">:</span>
+
+<span class="c1">## [Data Cleaning](/frc-robotics-dl.html)</span>
+
+<span class="c1">## Machine Learning/Deep Learning (Coming Soon)</span>
+<span class="n">matches_df</span><span class="p">[</span><span class="s1">&#39;autoRobot&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">matches_df</span> <span class="n">having</span> <span class="n">Roborecon</span> <span class="k">for</span> <span class="mi">2</span> <span class="n">years</span> <span class="k">with</span> <span class="n">its</span> <span class="n">benefits</span> <span class="n">clearly</span> <span class="n">paying</span> <span class="n">off</span><span class="p">,</span> <span class="n">I</span> <span class="n">wanted</span> <span class="n">to</span> <span class="n">see</span> <span class="k">if</span> <span class="n">we</span> <span class="n">could</span> <span class="n">push</span> <span class="n">our</span> <span class="n">scouting</span> <span class="n">abilities</span> <span class="n">even</span> <span class="n">further</span><span class="o">.</span> <span class="n">I</span> <span class="n">had</span> <span class="n">been</span> <span class="n">hearing</span> <span class="n">about</span> <span class="n">how</span> <span class="n">FRC</span> <span class="n">teams</span> <span class="n">are</span> <span class="n">starting</span> <span class="n">to</span> <span class="n">use</span> <span class="n">machine</span> <span class="n">learning</span> <span class="ow">in</span> <span class="n">their</span> <span class="n">vision</span> <span class="n">software</span> <span class="ow">and</span> <span class="n">autonomous</span> <span class="n">routines</span><span class="p">,</span> <span class="ow">and</span> <span class="n">I</span> <span class="n">was</span> <span class="n">interested</span> <span class="n">to</span> <span class="n">see</span> <span class="k">if</span> <span class="n">I</span> <span class="n">could</span> <span class="n">apply</span> <span class="n">ML</span><span class="o">/</span><span class="n">DL</span> <span class="n">to</span> <span class="n">scouting</span> <span class="n">data</span> <span class="ow">and</span> <span class="n">get</span> <span class="n">accurate</span> <span class="n">predictions</span><span class="o">.</span> <span class="n">I</span> <span class="n">had</span> <span class="n">already</span> <span class="n">gone</span> <span class="n">through</span> <span class="p">[</span><span class="n">Andrew</span> <span class="n">Ng</span><span class="s1">&#39;s &quot;Machine Learning&quot;](https://www.coursera.org/learn/machine-learning) course and had just started going through [Fastai&#39;</span><span class="n">s</span> <span class="n">Practical</span> <span class="n">Deep</span> <span class="n">Learning</span> <span class="k">for</span> <span class="n">Coders</span> <span class="n">Part</span> <span class="mi">1</span><span class="p">](</span><span class="n">fast</span><span class="o">.</span><span class="n">ai</span><span class="p">),</span> <span class="n">so</span> <span class="n">I</span> <span class="n">was</span> <span class="n">still</span> <span class="n">very</span> <span class="n">new</span> <span class="n">to</span> <span class="n">this</span> <span class="n">field</span><span class="o">.</span>
+
+<span class="n">As</span> <span class="n">it</span> <span class="n">turns</span> <span class="n">out</span><span class="p">,</span> <span class="n">yes</span><span class="p">,</span> <span class="n">you</span> <span class="n">can</span> <span class="n">use</span> <span class="n">Deep</span> <span class="n">Learning</span> <span class="ow">in</span> <span class="n">FRC</span> <span class="n">scouting</span><span class="o">.</span> <span class="n">There</span> <span class="n">are</span> <span class="n">tons</span> <span class="n">of</span> <span class="n">areas</span> <span class="n">it</span> <span class="n">can</span> <span class="n">be</span> <span class="n">used</span> <span class="ow">in</span><span class="o">.</span> <span class="n">My</span> <span class="n">scouting</span> <span class="n">team</span> <span class="ow">and</span> <span class="n">I</span> <span class="n">determined</span> <span class="n">a</span> <span class="nb">list</span> <span class="n">of</span> <span class="n">uses</span> <span class="k">for</span> <span class="n">the</span> <span class="n">ML</span> <span class="n">analysis</span> <span class="n">that</span> <span class="n">could</span> <span class="n">potentially</span> <span class="n">change</span> <span class="n">the</span> <span class="n">way</span> <span class="n">we</span> <span class="n">perform</span> <span class="n">at</span> <span class="n">competitions</span> <span class="n">completely</span><span class="p">:</span>
+
+<span class="mf">1.</span> <span class="n">Correcting</span> <span class="n">human</span> <span class="n">error</span><span class="o">.</span> <span class="n">When</span> <span class="n">you</span><span class="s1">&#39;re forcing the limited number of unwilling Freshmen on your team to scout during competition, they&#39;</span><span class="n">re</span> <span class="n">going</span> <span class="n">to</span> <span class="n">mislabel</span> <span class="n">data</span> <span class="ow">and</span> <span class="n">entirely</span> <span class="n">forget</span> <span class="n">to</span> <span class="n">scout</span> <span class="n">some</span> <span class="n">matches</span><span class="o">.</span> <span class="n">Early</span> <span class="ow">in</span> <span class="n">the</span> <span class="n">season</span> <span class="n">when</span> <span class="n">we</span> <span class="n">start</span> <span class="n">out</span> <span class="k">with</span> <span class="n">having</span> <span class="n">no</span> <span class="n">data</span> <span class="kn">from</span> <span class="nn">teams</span> <span class="k">for</span> <span class="n">that</span> <span class="n">year</span><span class="p">,</span> <span class="n">it</span><span class="s1">&#39;s critical that we correctly record how they&#39;</span><span class="n">re</span> <span class="n">performing</span> <span class="n">during</span> <span class="n">the</span> <span class="mi">8</span><span class="o">-</span><span class="mi">11</span> <span class="n">qualification</span> <span class="n">matches</span> <span class="n">they</span> <span class="n">get</span> <span class="n">before</span> <span class="n">alliance</span> <span class="n">selections</span> <span class="ow">or</span> <span class="n">we</span> <span class="n">might</span> <span class="n">miss</span> <span class="n">pick</span> <span class="n">a</span> <span class="n">team</span> <span class="ow">and</span> <span class="n">jeopardize</span> <span class="n">our</span> <span class="n">entire</span> <span class="n">season</span><span class="o">.</span>
+
+<span class="mf">2.</span> <span class="n">Predicting</span> <span class="n">match</span> <span class="ow">and</span> <span class="n">event</span> <span class="n">outcomes</span> <span class="n">before</span> <span class="n">they</span><span class="s1">&#39;ve happened. There are thousands of FRC teams with hundreds competing simultaneously during competition season, so the only way we could scout all of them is with the help of ML algorithms. Going into the Turing Division in 2018 at the Houston World Championships we already had match predictions and team specific stats for the 67 teams attending, most of which we had never seen compete, thanks to Deep Learning.</span>
+
+<span class="mf">3.</span> <span class="n">Revealing</span> <span class="n">missed</span> <span class="n">important</span> <span class="n">match</span> <span class="ow">and</span> <span class="n">team</span> <span class="n">data</span><span class="o">.</span> <span class="n">From</span> <span class="n">using</span> <span class="n">the</span> <span class="n">Roborecon</span> <span class="n">web</span> <span class="n">app</span> <span class="ow">in</span> <span class="n">the</span> <span class="n">past</span><span class="p">,</span> <span class="n">we</span><span class="s1">&#39;d discovered certain robot attributes that we thought mattered were irrelevant, and others we thought weren&#39;</span><span class="n">t</span> <span class="n">that</span> <span class="n">important</span> <span class="n">actually</span> <span class="n">mattered</span> <span class="n">a</span> <span class="n">lot</span><span class="o">.</span> <span class="n">Implementing</span> <span class="n">deep</span> <span class="n">learning</span> <span class="n">into</span> <span class="n">our</span> <span class="n">scouting</span> <span class="n">application</span> <span class="n">would</span> <span class="n">only</span> <span class="n">further</span> <span class="n">these</span> <span class="n">discoveries</span><span class="o">.</span>
+
+<span class="n">I</span><span class="s1">&#39;m going to assume you have a basic understanding of Python, [Jupyter Notebooks](http://jupyter.org), and ML/DL as I go into detail on my code and how I put everything together in this section of the writeup. Feel free to contact me with any questions or help for getting world class predictions on your own scouting data because really anyone can do this. As RoboRecon is proprietary software to Team Paradox, I&#39;</span><span class="n">ll</span> <span class="n">be</span> <span class="n">highlighting</span> <span class="n">what</span> <span class="n">code</span> <span class="n">we</span> <span class="n">presented</span> <span class="n">at</span> <span class="n">the</span> <span class="mi">2018</span> <span class="n">Houston</span> <span class="n">World</span> <span class="n">Championships</span> <span class="n">that</span> <span class="n">we</span> <span class="n">made</span> <span class="n">public</span><span class="o">.</span>
+
+<span class="o">---</span>
+
+<span class="n">This</span> <span class="n">ended</span> <span class="n">up</span> <span class="n">being</span> <span class="n">a</span> <span class="n">pretty</span> <span class="n">comprehensive</span> <span class="n">write</span> <span class="n">up</span><span class="p">,</span> <span class="n">so</span> <span class="n">the</span> <span class="n">Data</span> <span class="n">Cleaning</span> <span class="ow">and</span> <span class="n">Machine</span> <span class="n">Learning</span><span class="o">/</span><span class="n">Deep</span> <span class="n">Learning</span> <span class="n">sections</span> <span class="n">are</span> <span class="n">split</span> <span class="n">into</span> <span class="n">two</span> <span class="n">separate</span> <span class="n">pages</span><span class="p">:</span>
+
+<span class="c1">## [Data Cleaning](/frc-robotics-dl.html)</span>
+
+<span class="c1">## Machine Learning/Deep Learning (Coming Soon).apply(lambda r: r[f&#39;autoRobot{r[&quot;alliance_robot_pos&quot;]}&#39;], axis=1) having Roborecon for 2 years with its benefits clearly paying off, I wanted to see if we could push our scouting abilities even further. I had been hearing about how FRC teams are starting to use machine learning in their vision software and autonomous routines, and I was interested to see if I could apply ML/DL to scouting data and get accurate predictions. I had already gone through [Andrew Ng&#39;s &quot;Machine Learning&quot;](https://www.coursera.org/learn/machine-learning) course and had just started going through [Fastai&#39;s Practical Deep Learning for Coders Part 1](fast.ai), so I was still very new to this field.</span>
+
+<span class="n">As</span> <span class="n">it</span> <span class="n">turns</span> <span class="n">out</span><span class="p">,</span> <span class="n">yes</span><span class="p">,</span> <span class="n">you</span> <span class="n">can</span> <span class="n">use</span> <span class="n">Deep</span> <span class="n">Learning</span> <span class="ow">in</span> <span class="n">FRC</span> <span class="n">scouting</span><span class="o">.</span> <span class="n">There</span> <span class="n">are</span> <span class="n">tons</span> <span class="n">of</span> <span class="n">areas</span> <span class="n">it</span> <span class="n">can</span> <span class="n">be</span> <span class="n">used</span> <span class="ow">in</span><span class="o">.</span> <span class="n">My</span> <span class="n">scouting</span> <span class="n">team</span> <span class="ow">and</span> <span class="n">I</span> <span class="n">determined</span> <span class="n">a</span> <span class="nb">list</span> <span class="n">of</span> <span class="n">uses</span> <span class="k">for</span> <span class="n">the</span> <span class="n">ML</span> <span class="n">analysis</span> <span class="n">that</span> <span class="n">could</span> <span class="n">potentially</span> <span class="n">change</span> <span class="n">the</span> <span class="n">way</span> <span class="n">we</span> <span class="n">perform</span> <span class="n">at</span> <span class="n">competitions</span> <span class="n">completely</span><span class="p">:</span>
+
+<span class="mf">1.</span> <span class="n">Correcting</span> <span class="n">human</span> <span class="n">error</span><span class="o">.</span> <span class="n">When</span> <span class="n">you</span><span class="s1">&#39;re forcing the limited number of unwilling Freshmen on your team to scout during competition, they&#39;</span><span class="n">re</span> <span class="n">going</span> <span class="n">to</span> <span class="n">mislabel</span> <span class="n">data</span> <span class="ow">and</span> <span class="n">entirely</span> <span class="n">forget</span> <span class="n">to</span> <span class="n">scout</span> <span class="n">some</span> <span class="n">matches</span><span class="o">.</span> <span class="n">Early</span> <span class="ow">in</span> <span class="n">the</span> <span class="n">season</span> <span class="n">when</span> <span class="n">we</span> <span class="n">start</span> <span class="n">out</span> <span class="k">with</span> <span class="n">having</span> <span class="n">no</span> <span class="n">data</span> <span class="kn">from</span> <span class="nn">teams</span> <span class="k">for</span> <span class="n">that</span> <span class="n">year</span><span class="p">,</span> <span class="n">it</span><span class="s1">&#39;s critical that we correctly record how they&#39;</span><span class="n">re</span> <span class="n">performing</span> <span class="n">during</span> <span class="n">the</span> <span class="mi">8</span><span class="o">-</span><span class="mi">11</span> <span class="n">qualification</span> <span class="n">matches</span> <span class="n">they</span> <span class="n">get</span> <span class="n">before</span> <span class="n">alliance</span> <span class="n">selections</span> <span class="ow">or</span> <span class="n">we</span> <span class="n">might</span> <span class="n">miss</span> <span class="n">pick</span> <span class="n">a</span> <span class="n">team</span> <span class="ow">and</span> <span class="n">jeopardize</span> <span class="n">our</span> <span class="n">entire</span> <span class="n">season</span><span class="o">.</span>
+
+<span class="mf">2.</span> <span class="n">Predicting</span> <span class="n">match</span> <span class="ow">and</span> <span class="n">event</span> <span class="n">outcomes</span> <span class="n">before</span> <span class="n">they</span><span class="s1">&#39;ve happened. There are thousands of FRC teams with hundreds competing simultaneously during competition season, so the only way we could scout all of them is with the help of ML algorithms. Going into the Turing Division in 2018 at the Houston World Championships we already had match predictions and team specific stats for the 67 teams attending, most of which we had never seen compete, thanks to Deep Learning.</span>
+
+<span class="mf">3.</span> <span class="n">Revealing</span> <span class="n">missed</span> <span class="n">important</span> <span class="n">match</span> <span class="ow">and</span> <span class="n">team</span> <span class="n">data</span><span class="o">.</span> <span class="n">From</span> <span class="n">using</span> <span class="n">the</span> <span class="n">Roborecon</span> <span class="n">web</span> <span class="n">app</span> <span class="ow">in</span> <span class="n">the</span> <span class="n">past</span><span class="p">,</span> <span class="n">we</span><span class="s1">&#39;d discovered certain robot attributes that we thought mattered were irrelevant, and others we thought weren&#39;</span><span class="n">t</span> <span class="n">that</span> <span class="n">important</span> <span class="n">actually</span> <span class="n">mattered</span> <span class="n">a</span> <span class="n">lot</span><span class="o">.</span> <span class="n">Implementing</span> <span class="n">deep</span> <span class="n">learning</span> <span class="n">into</span> <span class="n">our</span> <span class="n">scouting</span> <span class="n">application</span> <span class="n">would</span> <span class="n">only</span> <span class="n">further</span> <span class="n">these</span> <span class="n">discoveries</span><span class="o">.</span>
+
+<span class="n">I</span><span class="s1">&#39;m going to assume you have a basic understanding of Python, [Jupyter Notebooks](http://jupyter.org), and ML/DL as I go into detail on my code and how I put everything together in this section of the writeup. Feel free to contact me with any questions or help for getting world class predictions on your own scouting data because really anyone can do this. As RoboRecon is proprietary software to Team Paradox, I&#39;</span><span class="n">ll</span> <span class="n">be</span> <span class="n">highlighting</span> <span class="n">what</span> <span class="n">code</span> <span class="n">we</span> <span class="n">presented</span> <span class="n">at</span> <span class="n">the</span> <span class="mi">2018</span> <span class="n">Houston</span> <span class="n">World</span> <span class="n">Championships</span> <span class="n">that</span> <span class="n">we</span> <span class="n">made</span> <span class="n">public</span><span class="o">.</span>
+
+<span class="o">---</span>
+
+<span class="n">This</span> <span class="n">ended</span> <span class="n">up</span> <span class="n">being</span> <span class="n">a</span> <span class="n">pretty</span> <span class="n">comprehensive</span> <span class="n">write</span> <span class="n">up</span><span class="p">,</span> <span class="n">so</span> <span class="n">the</span> <span class="n">Data</span> <span class="n">Cleaning</span> <span class="ow">and</span> <span class="n">Machine</span> <span class="n">Learning</span><span class="o">/</span><span class="n">Deep</span> <span class="n">Learning</span> <span class="n">sections</span> <span class="n">are</span> <span class="n">split</span> <span class="n">into</span> <span class="n">two</span> <span class="n">separate</span> <span class="n">pages</span><span class="p">:</span>
+
+<span class="c1">## [Data Cleaning](/frc-robotics-dl.html)</span>
+
+<span class="c1">## Machine Learning/Deep Learning (Coming Soon)</span>
+<span class="n">matches_df</span><span class="p">[</span><span class="s1">&#39;endgameRobot&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">matches</span> <span class="n">having</span> <span class="n">Roborecon</span> <span class="k">for</span> <span class="mi">2</span> <span class="n">years</span> <span class="k">with</span> <span class="n">its</span> <span class="n">benefits</span> <span class="n">clearly</span> <span class="n">paying</span> <span class="n">off</span><span class="p">,</span> <span class="n">I</span> <span class="n">wanted</span> <span class="n">to</span> <span class="n">see</span> <span class="k">if</span> <span class="n">we</span> <span class="n">could</span> <span class="n">push</span> <span class="n">our</span> <span class="n">scouting</span> <span class="n">abilities</span> <span class="n">even</span> <span class="n">further</span><span class="o">.</span> <span class="n">I</span> <span class="n">had</span> <span class="n">been</span> <span class="n">hearing</span> <span class="n">about</span> <span class="n">how</span> <span class="n">FRC</span> <span class="n">teams</span> <span class="n">are</span> <span class="n">starting</span> <span class="n">to</span> <span class="n">use</span> <span class="n">machine</span> <span class="n">learning</span> <span class="ow">in</span> <span class="n">their</span> <span class="n">vision</span> <span class="n">software</span> <span class="ow">and</span> <span class="n">autonomous</span> <span class="n">routines</span><span class="p">,</span> <span class="ow">and</span> <span class="n">I</span> <span class="n">was</span> <span class="n">interested</span> <span class="n">to</span> <span class="n">see</span> <span class="k">if</span> <span class="n">I</span> <span class="n">could</span> <span class="n">apply</span> <span class="n">ML</span><span class="o">/</span><span class="n">DL</span> <span class="n">to</span> <span class="n">scouting</span> <span class="n">data</span> <span class="ow">and</span> <span class="n">get</span> <span class="n">accurate</span> <span class="n">predictions</span><span class="o">.</span> <span class="n">I</span> <span class="n">had</span> <span class="n">already</span> <span class="n">gone</span> <span class="n">through</span> <span class="p">[</span><span class="n">Andrew</span> <span class="n">Ng</span><span class="s1">&#39;s &quot;Machine Learning&quot;](https://www.coursera.org/learn/machine-learning) course and had just started going through [Fastai&#39;</span><span class="n">s</span> <span class="n">Practical</span> <span class="n">Deep</span> <span class="n">Learning</span> <span class="k">for</span> <span class="n">Coders</span> <span class="n">Part</span> <span class="mi">1</span><span class="p">](</span><span class="n">fast</span><span class="o">.</span><span class="n">ai</span><span class="p">),</span> <span class="n">so</span> <span class="n">I</span> <span class="n">was</span> <span class="n">still</span> <span class="n">very</span> <span class="n">new</span> <span class="n">to</span> <span class="n">this</span> <span class="n">field</span><span class="o">.</span>
+
+<span class="n">As</span> <span class="n">it</span> <span class="n">turns</span> <span class="n">out</span><span class="p">,</span> <span class="n">yes</span><span class="p">,</span> <span class="n">you</span> <span class="n">can</span> <span class="n">use</span> <span class="n">Deep</span> <span class="n">Learning</span> <span class="ow">in</span> <span class="n">FRC</span> <span class="n">scouting</span><span class="o">.</span> <span class="n">There</span> <span class="n">are</span> <span class="n">tons</span> <span class="n">of</span> <span class="n">areas</span> <span class="n">it</span> <span class="n">can</span> <span class="n">be</span> <span class="n">used</span> <span class="ow">in</span><span class="o">.</span> <span class="n">My</span> <span class="n">scouting</span> <span class="n">team</span> <span class="ow">and</span> <span class="n">I</span> <span class="n">determined</span> <span class="n">a</span> <span class="nb">list</span> <span class="n">of</span> <span class="n">uses</span> <span class="k">for</span> <span class="n">the</span> <span class="n">ML</span> <span class="n">analysis</span> <span class="n">that</span> <span class="n">could</span> <span class="n">potentially</span> <span class="n">change</span> <span class="n">the</span> <span class="n">way</span> <span class="n">we</span> <span class="n">perform</span> <span class="n">at</span> <span class="n">competitions</span> <span class="n">completely</span><span class="p">:</span>
+
+<span class="mf">1.</span> <span class="n">Correcting</span> <span class="n">human</span> <span class="n">error</span><span class="o">.</span> <span class="n">When</span> <span class="n">you</span><span class="s1">&#39;re forcing the limited number of unwilling Freshmen on your team to scout during competition, they&#39;</span><span class="n">re</span> <span class="n">going</span> <span class="n">to</span> <span class="n">mislabel</span> <span class="n">data</span> <span class="ow">and</span> <span class="n">entirely</span> <span class="n">forget</span> <span class="n">to</span> <span class="n">scout</span> <span class="n">some</span> <span class="n">matches</span><span class="o">.</span> <span class="n">Early</span> <span class="ow">in</span> <span class="n">the</span> <span class="n">season</span> <span class="n">when</span> <span class="n">we</span> <span class="n">start</span> <span class="n">out</span> <span class="k">with</span> <span class="n">having</span> <span class="n">no</span> <span class="n">data</span> <span class="kn">from</span> <span class="nn">teams</span> <span class="k">for</span> <span class="n">that</span> <span class="n">year</span><span class="p">,</span> <span class="n">it</span><span class="s1">&#39;s critical that we correctly record how they&#39;</span><span class="n">re</span> <span class="n">performing</span> <span class="n">during</span> <span class="n">the</span> <span class="mi">8</span><span class="o">-</span><span class="mi">11</span> <span class="n">qualification</span> <span class="n">matches</span> <span class="n">they</span> <span class="n">get</span> <span class="n">before</span> <span class="n">alliance</span> <span class="n">selections</span> <span class="ow">or</span> <span class="n">we</span> <span class="n">might</span> <span class="n">miss</span> <span class="n">pick</span> <span class="n">a</span> <span class="n">team</span> <span class="ow">and</span> <span class="n">jeopardize</span> <span class="n">our</span> <span class="n">entire</span> <span class="n">season</span><span class="o">.</span>
+
+<span class="mf">2.</span> <span class="n">Predicting</span> <span class="n">match</span> <span class="ow">and</span> <span class="n">event</span> <span class="n">outcomes</span> <span class="n">before</span> <span class="n">they</span><span class="s1">&#39;ve happened. There are thousands of FRC teams with hundreds competing simultaneously during competition season, so the only way we could scout all of them is with the help of ML algorithms. Going into the Turing Division in 2018 at the Houston World Championships we already had match predictions and team specific stats for the 67 teams attending, most of which we had never seen compete, thanks to Deep Learning.</span>
+
+<span class="mf">3.</span> <span class="n">Revealing</span> <span class="n">missed</span> <span class="n">important</span> <span class="n">match</span> <span class="ow">and</span> <span class="n">team</span> <span class="n">data</span><span class="o">.</span> <span class="n">From</span> <span class="n">using</span> <span class="n">the</span> <span class="n">Roborecon</span> <span class="n">web</span> <span class="n">app</span> <span class="ow">in</span> <span class="n">the</span> <span class="n">past</span><span class="p">,</span> <span class="n">we</span><span class="s1">&#39;d discovered certain robot attributes that we thought mattered were irrelevant, and others we thought weren&#39;</span><span class="n">t</span> <span class="n">that</span> <span class="n">important</span> <span class="n">actually</span> <span class="n">mattered</span> <span class="n">a</span> <span class="n">lot</span><span class="o">.</span> <span class="n">Implementing</span> <span class="n">deep</span> <span class="n">learning</span> <span class="n">into</span> <span class="n">our</span> <span class="n">scouting</span> <span class="n">application</span> <span class="n">would</span> <span class="n">only</span> <span class="n">further</span> <span class="n">these</span> <span class="n">discoveries</span><span class="o">.</span>
+
+<span class="n">I</span><span class="s1">&#39;m going to assume you have a basic understanding of Python, [Jupyter Notebooks](http://jupyter.org), and ML/DL as I go into detail on my code and how I put everything together in this section of the writeup. Feel free to contact me with any questions or help for getting world class predictions on your own scouting data because really anyone can do this. As RoboRecon is proprietary software to Team Paradox, I&#39;</span><span class="n">ll</span> <span class="n">be</span> <span class="n">highlighting</span> <span class="n">what</span> <span class="n">code</span> <span class="n">we</span> <span class="n">presented</span> <span class="n">at</span> <span class="n">the</span> <span class="mi">2018</span> <span class="n">Houston</span> <span class="n">World</span> <span class="n">Championships</span> <span class="n">that</span> <span class="n">we</span> <span class="n">made</span> <span class="n">public</span><span class="o">.</span>
+
+<span class="o">---</span>
+
+<span class="n">This</span> <span class="n">ended</span> <span class="n">up</span> <span class="n">being</span> <span class="n">a</span> <span class="n">pretty</span> <span class="n">comprehensive</span> <span class="n">write</span> <span class="n">up</span><span class="p">,</span> <span class="n">so</span> <span class="n">the</span> <span class="n">Data</span> <span class="n">Cleaning</span> <span class="ow">and</span> <span class="n">Machine</span> <span class="n">Learning</span><span class="o">/</span><span class="n">Deep</span> <span class="n">Learning</span> <span class="n">sections</span> <span class="n">are</span> <span class="n">split</span> <span class="n">into</span> <span class="n">two</span> <span class="n">separate</span> <span class="n">pages</span><span class="p">:</span>
+
+<span class="c1"># [Data Cleaning](/frc-robotics-dl.html)</span>
+
+<span class="c1"># Machine Learning/Deep Learning (Coming Soon)_df.apply(lambda r: r[f&#39;endgameRobot{r[&quot;alliance_robot_pos&quot;]}&#39;], axis=1) having Roborecon for 2 years with its benefits clearly paying off, I wanted to see if we could push our scouting abilities even further. I had been hearing about how FRC teams are starting to use machine learning in their vision software and autonomous routines, and I was interested to see if I could apply ML/DL to scouting data and get accurate predictions. I had already gone through [Andrew Ng&#39;s &quot;Machine Learning&quot;](https://www.coursera.org/learn/machine-learning) course and had just started going through [Fastai&#39;s Practical Deep Learning for Coders Part 1](fast.ai), so I was still very new to this field.</span>
+
+<span class="n">As</span> <span class="n">it</span> <span class="n">turns</span> <span class="n">out</span><span class="p">,</span> <span class="n">yes</span><span class="p">,</span> <span class="n">you</span> <span class="n">can</span> <span class="n">use</span> <span class="n">Deep</span> <span class="n">Learning</span> <span class="ow">in</span> <span class="n">FRC</span> <span class="n">scouting</span><span class="o">.</span> <span class="n">There</span> <span class="n">are</span> <span class="n">tons</span> <span class="n">of</span> <span class="n">areas</span> <span class="n">it</span> <span class="n">can</span> <span class="n">be</span> <span class="n">used</span> <span class="ow">in</span><span class="o">.</span> <span class="n">My</span> <span class="n">scouting</span> <span class="n">team</span> <span class="ow">and</span> <span class="n">I</span> <span class="n">determined</span> <span class="n">a</span> <span class="nb">list</span> <span class="n">of</span> <span class="n">uses</span> <span class="k">for</span> <span class="n">the</span> <span class="n">ML</span> <span class="n">analysis</span> <span class="n">that</span> <span class="n">could</span> <span class="n">potentially</span> <span class="n">change</span> <span class="n">the</span> <span class="n">way</span> <span class="n">we</span> <span class="n">perform</span> <span class="n">at</span> <span class="n">competitions</span> <span class="n">completely</span><span class="p">:</span>
+
+<span class="mf">1.</span> <span class="n">Correcting</span> <span class="n">human</span> <span class="n">error</span><span class="o">.</span> <span class="n">When</span> <span class="n">you</span><span class="s1">&#39;re forcing the limited number of unwilling Freshmen on your team to scout during competition, they&#39;</span><span class="n">re</span> <span class="n">going</span> <span class="n">to</span> <span class="n">mislabel</span> <span class="n">data</span> <span class="ow">and</span> <span class="n">entirely</span> <span class="n">forget</span> <span class="n">to</span> <span class="n">scout</span> <span class="n">some</span> <span class="n">matches</span><span class="o">.</span> <span class="n">Early</span> <span class="ow">in</span> <span class="n">the</span> <span class="n">season</span> <span class="n">when</span> <span class="n">we</span> <span class="n">start</span> <span class="n">out</span> <span class="k">with</span> <span class="n">having</span> <span class="n">no</span> <span class="n">data</span> <span class="kn">from</span> <span class="nn">teams</span> <span class="k">for</span> <span class="n">that</span> <span class="n">year</span><span class="p">,</span> <span class="n">it</span><span class="s1">&#39;s critical that we correctly record how they&#39;</span><span class="n">re</span> <span class="n">performing</span> <span class="n">during</span> <span class="n">the</span> <span class="mi">8</span><span class="o">-</span><span class="mi">11</span> <span class="n">qualification</span> <span class="n">matches</span> <span class="n">they</span> <span class="n">get</span> <span class="n">before</span> <span class="n">alliance</span> <span class="n">selections</span> <span class="ow">or</span> <span class="n">we</span> <span class="n">might</span> <span class="n">miss</span> <span class="n">pick</span> <span class="n">a</span> <span class="n">team</span> <span class="ow">and</span> <span class="n">jeopardize</span> <span class="n">our</span> <span class="n">entire</span> <span class="n">season</span><span class="o">.</span>
+
+<span class="mf">2.</span> <span class="n">Predicting</span> <span class="n">match</span> <span class="ow">and</span> <span class="n">event</span> <span class="n">outcomes</span> <span class="n">before</span> <span class="n">they</span><span class="s1">&#39;ve happened. There are thousands of FRC teams with hundreds competing simultaneously during competition season, so the only way we could scout all of them is with the help of ML algorithms. Going into the Turing Division in 2018 at the Houston World Championships we already had match predictions and team specific stats for the 67 teams attending, most of which we had never seen compete, thanks to Deep Learning.</span>
+
+<span class="mf">3.</span> <span class="n">Revealing</span> <span class="n">missed</span> <span class="n">important</span> <span class="n">match</span> <span class="ow">and</span> <span class="n">team</span> <span class="n">data</span><span class="o">.</span> <span class="n">From</span> <span class="n">using</span> <span class="n">the</span> <span class="n">Roborecon</span> <span class="n">web</span> <span class="n">app</span> <span class="ow">in</span> <span class="n">the</span> <span class="n">past</span><span class="p">,</span> <span class="n">we</span><span class="s1">&#39;d discovered certain robot attributes that we thought mattered were irrelevant, and others we thought weren&#39;</span><span class="n">t</span> <span class="n">that</span> <span class="n">important</span> <span class="n">actually</span> <span class="n">mattered</span> <span class="n">a</span> <span class="n">lot</span><span class="o">.</span> <span class="n">Implementing</span> <span class="n">deep</span> <span class="n">learning</span> <span class="n">into</span> <span class="n">our</span> <span class="n">scouting</span> <span class="n">application</span> <span class="n">would</span> <span class="n">only</span> <span class="n">further</span> <span class="n">these</span> <span class="n">discoveries</span><span class="o">.</span>
+
+<span class="n">I</span><span class="s1">&#39;m going to assume you have a basic understanding of Python, [Jupyter Notebooks](http://jupyter.org), and ML/DL as I go into detail on my code and how I put everything together in this section of the writeup. Feel free to contact me with any questions or help for getting world class predictions on your own scouting data because really anyone can do this. As RoboRecon is proprietary software to Team Paradox, I&#39;</span><span class="n">ll</span> <span class="n">be</span> <span class="n">highlighting</span> <span class="n">what</span> <span class="n">code</span> <span class="n">we</span> <span class="n">presented</span> <span class="n">at</span> <span class="n">the</span> <span class="mi">2018</span> <span class="n">Houston</span> <span class="n">World</span> <span class="n">Championships</span> <span class="n">that</span> <span class="n">we</span> <span class="n">made</span> <span class="n">public</span><span class="o">.</span>
+
+<span class="o">---</span>
+
+<span class="n">This</span> <span class="n">ended</span> <span class="n">up</span> <span class="n">being</span> <span class="n">a</span> <span class="n">pretty</span> <span class="n">comprehensive</span> <span class="n">write</span> <span class="n">up</span><span class="p">,</span> <span class="n">so</span> <span class="n">the</span> <span class="n">Data</span> <span class="n">Cleaning</span> <span class="ow">and</span> <span class="n">Machine</span> <span class="n">Learning</span><span class="o">/</span><span class="n">Deep</span> <span class="n">Learning</span> <span class="n">sections</span> <span class="n">are</span> <span class="n">split</span> <span class="n">into</span> <span class="n">two</span> <span class="n">separate</span> <span class="n">pages</span><span class="p">:</span>
+
+<span class="c1">## [Data Cleaning](/frc-robotics-dl.html)</span>
+
+<span class="c1">## Machine Learning/Deep Learning (Coming Soon)</span>
+</pre></div>
+
+
+<p>We're going to want a way to sort the many rows of match data. For now, it would make sense if we grouped rows by event and then sort it by time. We can always change this later. It'll also make more sense if we move the columns we're using to index our data to the beginning of our dataframe.</p>
+<div class="highlight"><pre><span></span><span class="c1"># create addition column for a team&#39;s match number in each competition</span>
+<span class="n">matches_df</span><span class="o">.</span><span class="n">sort_values</span><span class="p">(</span><span class="s1">&#39;actual_time&#39;</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+<span class="n">matches_df</span><span class="p">[</span><span class="s1">&#39;team_match_num&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">matches_df</span><span class="o">.</span><span class="n">groupby</span><span class="p">([</span><span class="s1">&#39;event_key&#39;</span><span class="p">,</span> <span class="s1">&#39;team_key&#39;</span><span class="p">])</span><span class="o">.</span><span class="n">cumcount</span><span class="p">()</span> <span class="o">+</span> <span class="mi">1</span>
+
+<span class="c1"># convert unix timestamps to datetime</span>
+<span class="n">datetime_cols</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;actual_time&#39;</span><span class="p">,</span> <span class="s1">&#39;post_result_time&#39;</span><span class="p">,</span> <span class="s1">&#39;predicted_time&#39;</span><span class="p">,</span> <span class="s1">&#39;time&#39;</span><span class="p">]</span>
+<span class="n">matches_df</span><span class="p">[</span><span class="n">datetime_cols</span><span class="p">]</span> <span class="o">=</span> <span class="n">matches_df</span><span class="p">[</span><span class="n">datetime_cols</span><span class="p">]</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">pd</span><span class="o">.</span><span class="n">to_datetime</span><span class="p">,</span> <span class="n">unit</span><span class="o">=</span><span class="s1">&#39;s&#39;</span><span class="p">)</span>
+
+<span class="c1"># sort data by even start_date (most recent on top)</span>
+<span class="n">matches_df</span><span class="o">.</span><span class="n">sort_values</span><span class="p">([</span><span class="s1">&#39;event_week&#39;</span><span class="p">,</span> <span class="s1">&#39;event_key&#39;</span><span class="p">,</span> <span class="s1">&#39;actual_time&#39;</span><span class="p">,</span> <span class="s1">&#39;alliance&#39;</span><span class="p">],</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+<span class="n">non_sorted</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;event_key&#39;</span><span class="p">,</span> <span class="s1">&#39;match_key&#39;</span><span class="p">,</span> <span class="s1">&#39;team_key&#39;</span><span class="p">,</span> <span class="s1">&#39;event_week&#39;</span><span class="p">,</span> <span class="s1">&#39;team_match_num&#39;</span><span class="p">,</span>
+             <span class="s1">&#39;actual_time&#39;</span><span class="p">,</span> <span class="s1">&#39;predicted_time&#39;</span><span class="p">,</span> <span class="s1">&#39;post_result_time&#39;</span><span class="p">,</span> <span class="s1">&#39;time&#39;</span><span class="p">]</span>
+
+<span class="c1"># convert columna names to snake case</span>
+<span class="n">matches_df</span><span class="o">.</span><span class="n">columns</span> <span class="o">=</span> <span class="p">[</span> <span class="sa">f</span><span class="s1">&#39;tba_{camel_to_snake(c)}&#39;</span> <span class="k">if</span> <span class="n">c</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">non_sorted</span> <span class="k">else</span> <span class="n">c</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">matches_df</span><span class="o">.</span><span class="n">columns</span> <span class="p">]</span>
+
+<span class="c1"># define sort order</span>
+<span class="n">matches_col_order</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;event_key&#39;</span><span class="p">,</span> <span class="s1">&#39;match_key&#39;</span><span class="p">,</span> <span class="s1">&#39;team_key&#39;</span><span class="p">,</span> <span class="s1">&#39;event_week&#39;</span><span class="p">,</span> <span class="s1">&#39;team_match_num&#39;</span><span class="p">,</span> <span class="s1">&#39;actual_time&#39;</span><span class="p">]</span> <span class="o">+</span> \
+                   <span class="nb">sorted</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">matches_df</span><span class="o">.</span><span class="n">columns</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="n">non_sorted</span><span class="p">)))</span> <span class="o">+</span> \
+                   <span class="p">[</span><span class="s1">&#39;predicted_time&#39;</span><span class="p">,</span> <span class="s1">&#39;post_result_time&#39;</span><span class="p">,</span> <span class="s1">&#39;time&#39;</span><span class="p">]</span>
+
+<span class="c1"># sort column names</span>
+<span class="n">matches_df</span> <span class="o">=</span> <span class="n">matches_df</span><span class="o">.</span><span class="n">reindex</span><span class="p">(</span><span class="n">matches_col_order</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+</pre></div>
+
+
+<p>At this point I'm satisfied with our new cleaned up dataset. Let's see what it looks like now:</p>
+<p><img alt="img" src="images/scouting_app/jnb_2.png"></p>
+<p>Now to save it as a csv to use for later.</p>
+<div class="highlight"><pre><span></span><span class="n">matches_df</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span><span class="n">team_match_scores_file</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+</pre></div>
+
+
+<h4>Getting Overall Stats by Team per Event</h4>
+<p>The process of pulling the data from TBA, loading in the data and cleaning, and saving it as a csv file is very similar to the team match data we just formatted. For the sake of not repeating myself, I'm going to skip over the exact code/instructions. While match team data consists of specific statistics such as 'power ups activated' or 'tech fouls accumulated', overall match stats means what it's called. Parameters such as OPR, number of match wins/losses, and CCWMS are what we're looking at. Here's what the cleaned up dataframe looks like for Overall Stats:</p>
+<p><img alt="img" src="images/scouting_app/jnb_3.png"></p>
+<h4>Getting Scouing Reports for the Competition Year</h4>
+<p>Just like the TBA that's hosted on our Firebase server, pullling all our scouitng data is done in the exact same way.</p>
+<div class="highlight"><pre><span></span><span class="c1"># get target event data</span>
+<span class="o">%</span><span class="n">time</span> <span class="n">r</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;https://paradox-scout-dc256.firebaseio.com/team_scouting_reports/2102/</span><span class="si">{rr_read_api_key}</span><span class="s1">.json&#39;</span><span class="p">)</span>
+
+<span class="n">scouting_reports</span> <span class="o">=</span> <span class="p">[</span><span class="n">img</span><span class="p">]</span>
+
+<span class="k">if</span> <span class="p">(</span><span class="n">r</span><span class="o">.</span><span class="n">status_code</span> <span class="o">==</span> <span class="mi">200</span><span class="p">):</span>
+   <span class="c1">#pdb.set_trace()</span>
+   <span class="n">target_scouting_data</span> <span class="o">=</span> <span class="n">r</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
+
+   <span class="k">for</span> <span class="n">event_key</span><span class="p">,</span> <span class="n">scores</span> <span class="ow">in</span> <span class="n">target_scouting_data</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+       <span class="c1"># print(event_key)</span>
+       <span class="c1"># only load ratings for current comp_yr</span>
+       <span class="k">if</span> <span class="p">(</span><span class="n">event_key</span><span class="p">[:</span><span class="mi">4</span><span class="p">]</span> <span class="o">!=</span> <span class="nb">str</span><span class="p">(</span><span class="n">comp_yr</span><span class="p">)):</span> <span class="k">continue</span>
+
+       <span class="n">scouting_reports</span> <span class="o">+=</span> <span class="p">[</span> <span class="n">v</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span><span class="n">v</span> <span class="ow">in</span> <span class="n">scores</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="p">(</span><span class="s1">&#39;team_id&#39;</span> <span class="ow">in</span> <span class="n">v</span><span class="p">)</span> <span class="p">]</span>
+</pre></div>
+
+
+<h4>Load into a Dataframe and Clean/Transform Data</h4>
+<p>Let's start out our data cleaning by formatting our column names and orders so everything makes sense to someone reading the dataframe from left to right, and then let's fix our date &amp; time columns so they look cleaner.</p>
+<div class="highlight"><pre><span></span><span class="c1"># convert unix timestamps to datetime</span>
+<span class="n">scouting_reports_df</span><span class="p">[</span><span class="s1">&#39;scored_at&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_datetime</span><span class="p">(</span><span class="n">scouting_reports_df</span><span class="p">[</span><span class="s1">&#39;scored_at&#39;</span><span class="p">],</span> <span class="n">unit</span><span class="o">=</span><span class="s1">&#39;ms&#39;</span><span class="p">)</span>
+
+<span class="c1"># sort by date ascending (most recent on top)</span>
+<span class="n">scouting_reports_df</span><span class="o">.</span><span class="n">sort_values</span><span class="p">([</span><span class="s1">&#39;team_id&#39;</span><span class="p">,</span> <span class="s1">&#39;scored_at&#39;</span><span class="p">],</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+<span class="c1"># remove rows without an event_id</span>
+<span class="n">scouting_reports_df</span> <span class="o">=</span> <span class="n">scouting_reports_df</span><span class="p">[</span><span class="n">pd</span><span class="o">.</span><span class="n">notnull</span><span class="p">(</span><span class="n">scouting_reports_df</span><span class="p">[</span><span class="s1">&#39;event_id&#39;</span><span class="p">])]</span>
+
+<span class="c1"># drop the &#39;scored_by&#39; column (and other weird/probably test values)</span>
+<span class="n">scouting_reports_df</span><span class="o">.</span><span class="n">drop</span><span class="p">([</span><span class="s1">&#39;scored_by&#39;</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+<span class="c1"># convert numeric columns to numeric data types</span>
+<span class="n">numeric_cols</span> <span class="o">=</span> <span class="n">scouting_reports_df</span><span class="o">.</span><span class="n">drop</span><span class="p">([</span><span class="s1">&#39;event_id&#39;</span><span class="p">,</span> <span class="s1">&#39;match_key&#39;</span><span class="p">,</span> <span class="s1">&#39;scored_at&#39;</span><span class="p">,</span> <span class="s1">&#39;team_id&#39;</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">columns</span>
+<span class="n">scouting_reports_df</span><span class="p">[</span><span class="n">numeric_cols</span><span class="p">]</span> <span class="o">=</span> <span class="n">scouting_reports_df</span><span class="p">[</span><span class="n">numeric_cols</span><span class="p">]</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">pd</span><span class="o">.</span><span class="n">to_numeric</span><span class="p">,</span> <span class="n">errors</span><span class="o">=</span><span class="s1">&#39;coerce&#39;</span><span class="p">)</span>
+
+<span class="c1"># convert boolean columns and those that maintain a count to int</span>
+<span class="n">int_cols</span> <span class="o">=</span> <span class="p">[</span><span class="n">img</span><span class="p">]</span>
+<span class="n">scouting_reports_df</span><span class="p">[</span><span class="n">int_cols</span><span class="p">]</span> <span class="o">=</span> <span class="n">scouting_reports_df</span><span class="p">[</span><span class="n">int_cols</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+</pre></div>
+
+
+<p>I see that there are 'cubes on X' (with 'X' being a specific scoring area on the playing field) 'missed' or 'made' stats in our dataframe. A better metric to see how many cubes a team can potentially score in a particular area would be 'cubes attempted on X'. It would just be another way of looking at the data we've already gathered which we'll attach to our already existing scouting dataframe:</p>
+<div class="highlight"><pre><span></span><span class="c1"># add attempted columns</span>
+<span class="k">def</span> <span class="nf">attmptedExchange</span><span class="p">(</span><span class="n">row</span><span class="p">):</span>
+   <span class="k">if</span> <span class="p">(</span><span class="n">pd</span><span class="o">.</span><span class="n">notnull</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="s1">&#39;rating_overall_exchange_efficiency&#39;</span><span class="p">])</span>
+       <span class="ow">or</span> <span class="n">row</span><span class="p">[</span><span class="s1">&#39;rating_scoring_cubes_exchanged_made&#39;</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">):</span>
+       <span class="k">return</span> <span class="mi">1</span>
+   <span class="k">return</span> <span class="mi">0</span>
+<span class="k">def</span> <span class="nf">attmptedSwitch</span><span class="p">(</span><span class="n">row</span><span class="p">):</span>
+   <span class="k">if</span> <span class="p">(</span><span class="n">pd</span><span class="o">.</span><span class="n">notnull</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="s1">&#39;rating_overall_switch_efficiency&#39;</span><span class="p">])</span>
+       <span class="ow">or</span> <span class="n">row</span><span class="p">[</span><span class="s1">&#39;rating_scoring_cubes_on_switch_made&#39;</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">0</span>
+       <span class="ow">or</span> <span class="n">row</span><span class="p">[</span><span class="s1">&#39;rating_scoring_cubes_on_switch_missed&#39;</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">):</span>
+       <span class="k">return</span> <span class="mi">1</span>
+   <span class="k">return</span> <span class="mi">0</span>
+<span class="k">def</span> <span class="nf">attmptedSwitchAuto</span><span class="p">(</span><span class="n">row</span><span class="p">):</span>
+   <span class="k">if</span> <span class="p">(</span><span class="n">pd</span><span class="o">.</span><span class="n">notnull</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="s1">&#39;rating_overall_switch_efficiency_auto&#39;</span><span class="p">])</span>
+       <span class="ow">or</span> <span class="n">row</span><span class="p">[</span><span class="s1">&#39;rating_scoring_cubes_on_switch_auto_made&#39;</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">0</span>
+       <span class="ow">or</span> <span class="n">row</span><span class="p">[</span><span class="s1">&#39;rating_scoring_cubes_on_switch_auto_missed&#39;</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">):</span>
+       <span class="k">return</span> <span class="mi">1</span>
+   <span class="k">return</span> <span class="mi">0</span>
+<span class="k">def</span> <span class="nf">attmptedScale</span><span class="p">(</span><span class="n">row</span><span class="p">):</span>
+   <span class="k">if</span> <span class="p">(</span><span class="n">pd</span><span class="o">.</span><span class="n">notnull</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="s1">&#39;rating_overall_scale_efficiency&#39;</span><span class="p">])</span>
+       <span class="ow">or</span> <span class="n">row</span><span class="p">[</span><span class="s1">&#39;rating_scoring_cubes_on_scale_made&#39;</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">0</span>
+       <span class="ow">or</span> <span class="n">row</span><span class="p">[</span><span class="s1">&#39;rating_scoring_cubes_on_scale_missed&#39;</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">):</span>
+       <span class="k">return</span> <span class="mi">1</span>
+   <span class="k">return</span> <span class="mi">0</span>
+<span class="k">def</span> <span class="nf">attmptedScaleAuto</span><span class="p">(</span><span class="n">row</span><span class="p">):</span>
+   <span class="k">if</span> <span class="p">(</span><span class="n">pd</span><span class="o">.</span><span class="n">notnull</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="s1">&#39;rating_overall_scale_efficiency_auto&#39;</span><span class="p">])</span>
+       <span class="ow">or</span> <span class="n">row</span><span class="p">[</span><span class="s1">&#39;rating_scoring_cubes_on_scale_auto_made&#39;</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">0</span>
+       <span class="ow">or</span> <span class="n">row</span><span class="p">[</span><span class="s1">&#39;rating_scoring_cubes_on_scale_auto_missed&#39;</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">):</span>
+       <span class="k">return</span> <span class="mi">1</span>
+   <span class="k">return</span> <span class="mi">0</span>
+
+<span class="n">scouting_reports_df</span><span class="p">[</span><span class="s1">&#39;rating_attempted_exchange&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">scouting_reports_df</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span>
+   <span class="k">lambda</span> <span class="n">r</span><span class="p">:</span> <span class="n">attmptedExchange</span><span class="p">(</span><span class="n">r</span><span class="p">),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+<span class="n">scouting_reports_df</span><span class="p">[</span><span class="s1">&#39;rating_attempted_switch&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">scouting_reports_df</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span>
+   <span class="k">lambda</span> <span class="n">r</span><span class="p">:</span> <span class="n">attmptedSwitch</span><span class="p">(</span><span class="n">r</span><span class="p">),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+<span class="n">scouting_reports_df</span><span class="p">[</span><span class="s1">&#39;rating_attempted_switch_auto&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">scouting_reports_df</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span>
+   <span class="k">lambda</span> <span class="n">r</span><span class="p">:</span> <span class="n">attmptedSwitchAuto</span><span class="p">(</span><span class="n">r</span><span class="p">),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+<span class="n">scouting_reports_df</span><span class="p">[</span><span class="s1">&#39;rating_attempted_scale&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">scouting_reports_df</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span>
+   <span class="k">lambda</span> <span class="n">r</span><span class="p">:</span> <span class="n">attmptedScale</span><span class="p">(</span><span class="n">r</span><span class="p">),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+<span class="n">scouting_reports_df</span><span class="p">[</span><span class="s1">&#39;rating_attempted_scale_auto&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">scouting_reports_df</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span>
+   <span class="k">lambda</span> <span class="n">r</span><span class="p">:</span> <span class="n">attmptedScaleAuto</span><span class="p">(</span><span class="n">r</span><span class="p">),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+</pre></div>
+
+
+<p>One thing that ML models do not like are NaN values. Maybe a scouting report for one team during a match wasn't submitted or a scouter forgot to watch a team's autonomous run during the match they were supposed to be, we need to replace these NaN values with something that our ML models won't complain about. One easy option is adding in a 'signal value' that would never appear in the actual data indicating that whatever cell it's placed in was previously occupied by a NaN value:</p>
+<div class="highlight"><pre><span></span><span class="n">scouting_reports_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">scouting_reports_df</span><span class="o">.</span><span class="n">rating_attempted_switch</span> <span class="o">==</span> <span class="mi">0</span><span class="p">,</span>
+                       <span class="p">[</span><span class="s1">&#39;rating_overall_switch_efficiency&#39;</span><span class="p">,</span>
+                        <span class="s1">&#39;rating_scoring_cubes_on_switch_made&#39;</span><span class="p">,</span>
+                        <span class="s1">&#39;rating_scoring_cubes_on_switch_missed&#39;</span><span class="p">]]</span> <span class="o">=</span> <span class="o">-</span><span class="mi">99</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+
+<span class="n">scouting_reports_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">scouting_reports_df</span><span class="o">.</span><span class="n">rating_attempted_switch_auto</span> <span class="o">==</span> <span class="mi">0</span><span class="p">,</span>
+                       <span class="p">[</span><span class="s1">&#39;rating_overall_switch_efficiency_auto&#39;</span><span class="p">,</span>
+                        <span class="s1">&#39;rating_scoring_cubes_on_switch_auto_made&#39;</span><span class="p">,</span>
+                        <span class="s1">&#39;rating_scoring_cubes_on_switch_auto_missed&#39;</span><span class="p">]]</span> <span class="o">=</span> <span class="o">-</span><span class="mi">99</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+
+<span class="n">scouting_reports_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">scouting_reports_df</span><span class="o">.</span><span class="n">rating_attempted_scale</span> <span class="o">==</span> <span class="mi">0</span><span class="p">,</span>
+                       <span class="p">[</span><span class="s1">&#39;rating_overall_scale_efficiency&#39;</span><span class="p">,</span>
+                        <span class="s1">&#39;rating_scoring_cubes_on_scale_made&#39;</span><span class="p">,</span>
+                        <span class="s1">&#39;rating_scoring_cubes_on_scale_missed&#39;</span><span class="p">]]</span> <span class="o">=</span> <span class="o">-</span><span class="mi">99</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+
+<span class="n">scouting_reports_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">scouting_reports_df</span><span class="o">.</span><span class="n">rating_attempted_scale_auto</span> <span class="o">==</span> <span class="mi">0</span><span class="p">,</span>
+                       <span class="p">[</span><span class="s1">&#39;rating_overall_scale_efficiency_auto&#39;</span><span class="p">,</span>
+                        <span class="s1">&#39;rating_scoring_cubes_on_scale_auto_made&#39;</span><span class="p">,</span>
+                        <span class="s1">&#39;rating_scoring_cubes_on_scale_auto_missed&#39;</span><span class="p">]]</span> <span class="o">=</span> <span class="o">-</span><span class="mi">99</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+
+<span class="n">scouting_reports_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">scouting_reports_df</span><span class="o">.</span><span class="n">rating_attempted_exchange</span> <span class="o">==</span> <span class="mi">0</span><span class="p">,</span>
+                       <span class="p">[</span><span class="s1">&#39;rating_overall_exchange_efficiency&#39;</span><span class="p">,</span>
+                       <span class="s1">&#39;rating_scoring_cubes_exchanged_made&#39;</span><span class="p">]]</span> <span class="o">=</span> <span class="o">-</span><span class="mi">99</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+</pre></div>
+
+
+<p>In the scouting data we had our scouters give 'efficiency ratings' to teams on a 1-5 scale on how they performed in certain areas. Just as before, we've got null values we need to replace:</p>
+<div class="highlight"><pre><span></span><span class="c1"># fix null &quot;efficiency&quot; ratings with a number between 1-5 based on the ratio of mades</span>
+<span class="c1"># via the min and max of mades in the dataset</span>
+
+<span class="n">cols</span> <span class="o">=</span> <span class="p">[</span>
+   <span class="p">(</span><span class="s1">&#39;rating_attempted_switch&#39;</span><span class="p">,</span> <span class="s1">&#39;rating_overall_switch_efficiency&#39;</span><span class="p">,</span> <span class="s1">&#39;rating_scoring_cubes_on_switch_made&#39;</span><span class="p">),</span>
+   <span class="p">(</span><span class="s1">&#39;rating_attempted_switch_auto&#39;</span><span class="p">,</span> <span class="s1">&#39;rating_overall_switch_efficiency_auto&#39;</span><span class="p">,</span> <span class="s1">&#39;rating_scoring_cubes_on_switch_auto_made&#39;</span><span class="p">),</span>
+   <span class="p">(</span><span class="s1">&#39;rating_attempted_scale&#39;</span><span class="p">,</span> <span class="s1">&#39;rating_overall_scale_efficiency&#39;</span><span class="p">,</span> <span class="s1">&#39;rating_scoring_cubes_on_scale_made&#39;</span><span class="p">),</span>
+   <span class="p">(</span><span class="s1">&#39;rating_attempted_scale_auto&#39;</span><span class="p">,</span> <span class="s1">&#39;rating_overall_scale_efficiency_auto&#39;</span><span class="p">,</span> <span class="s1">&#39;rating_scoring_cubes_on_scale_auto_made&#39;</span><span class="p">),</span>
+   <span class="p">(</span><span class="s1">&#39;rating_attempted_exchange&#39;</span><span class="p">,</span> <span class="s1">&#39;rating_overall_exchange_efficiency&#39;</span><span class="p">,</span> <span class="s1">&#39;rating_scoring_cubes_exchanged_made&#39;</span><span class="p">)</span>
+<span class="p">]</span>
+
+<span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">cols</span><span class="p">:</span>
+   <span class="n">x_min</span> <span class="o">=</span> <span class="n">scouting_reports_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">scouting_reports_df</span><span class="p">[</span><span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span> <span class="o">==</span> <span class="mi">1</span><span class="p">,</span> <span class="n">x</span><span class="p">[</span><span class="mi">2</span><span class="p">]]</span><span class="o">.</span><span class="n">min</span><span class="p">()</span>
+   <span class="n">x_max</span> <span class="o">=</span> <span class="n">scouting_reports_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">scouting_reports_df</span><span class="p">[</span><span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span> <span class="o">==</span> <span class="mi">1</span><span class="p">,</span> <span class="n">x</span><span class="p">[</span><span class="mi">2</span><span class="p">]]</span><span class="o">.</span><span class="n">max</span><span class="p">()</span>
+
+   <span class="n">scouting_reports_df</span><span class="p">[</span><span class="n">x</span><span class="p">[</span><span class="mi">1</span><span class="p">]]</span> <span class="o">=</span> <span class="n">scouting_reports_df</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span>
+       <span class="k">lambda</span> <span class="n">r</span><span class="p">:</span> <span class="n">r</span><span class="p">[</span><span class="n">x</span><span class="p">[</span><span class="mi">1</span><span class="p">]]</span> <span class="k">if</span> <span class="n">pd</span><span class="o">.</span><span class="n">notnull</span><span class="p">(</span><span class="n">r</span><span class="p">[</span><span class="n">x</span><span class="p">[</span><span class="mi">1</span><span class="p">]])</span> <span class="k">else</span> <span class="n">np</span><span class="o">.</span><span class="n">ceil</span><span class="p">(((</span><span class="n">r</span><span class="p">[</span><span class="n">x</span><span class="p">[</span><span class="mi">2</span><span class="p">]]</span> <span class="o">-</span> <span class="n">x_min</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">x_max</span> <span class="o">-</span> <span class="n">x_min</span><span class="p">))</span> <span class="o">*</span> <span class="p">(</span><span class="mi">5</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span><span class="p">),</span>
+       <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+<span class="n">cols_to_fill</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">scouting_reports_df</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">regex</span><span class="o">=</span><span class="s1">&#39;^rating_&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">columns</span><span class="p">)</span>
+<span class="c1"># cols_to_fill</span>
+
+<span class="c1"># convert remaining NaNs to their respective means BY team</span>
+<span class="n">scouting_reports_df</span><span class="p">[</span><span class="n">cols_to_fill</span><span class="p">]</span> <span class="o">=</span> <span class="n">scouting_reports_df</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s1">&#39;team_id&#39;</span><span class="p">)[</span><span class="n">cols_to_fill</span><span class="p">]</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span>
+   <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="o">.</span><span class="n">fillna</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">mean</span><span class="p">()))</span>
+</pre></div>
+
+
+<p>Now let's look at what our formatted scouting dataframe looks like:</p>
+<div class="highlight"><pre><span></span><span class="n">scouting_reports_df</span><span class="p">[(</span><span class="n">scouting_reports_df</span><span class="o">.</span><span class="n">team_id</span> <span class="o">==</span> <span class="s1">&#39;frc2102&#39;</span><span class="p">)]</span>
+</pre></div>
+
+
+<p><img alt="img" src="images/scouting_app/jnb_4.png"></p>
+<p>By calling a <code>DataFrameSummary(scouting_reports_df).summary()</code> we can see if anything looks off in our dataframe. As we can see below, there are still some NaN values we need to get rid of:</p>
+<p><img alt="img" src="images/scouting_app/jnb_5.png"></p>
+<div class="highlight"><pre><span></span><span class="c1"># convert remaining NaNs to 0</span>
+<span class="n">scouting_reports_df</span><span class="o">.</span><span class="n">fillna</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+<span class="c1">#re-sort the columns alphanumerically</span>
+<span class="n">non_sorted</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;event_id&#39;</span><span class="p">,</span> <span class="s1">&#39;match_key&#39;</span><span class="p">,</span> <span class="s1">&#39;team_id&#39;</span><span class="p">]</span>
+
+<span class="c1"># define sort order</span>
+<span class="n">scouting_reports_col_order</span> <span class="o">=</span> <span class="n">non_sorted</span> <span class="o">+</span> <span class="nb">sorted</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">scouting_reports_df</span><span class="o">.</span><span class="n">columns</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="n">non_sorted</span><span class="p">)))</span>
+
+<span class="n">scouting_reports_df</span> <span class="o">=</span> <span class="n">scouting_reports_df</span><span class="o">.</span><span class="n">reindex</span><span class="p">(</span><span class="n">scouting_reports_col_order</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+</pre></div>
+
+
+<p>With everything cleaned up, we can save our dataframe as a csv file now:</p>
+<div class="highlight"><pre><span></span><span class="n">scouting_reports_df</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span><span class="n">scouting_reports_file</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+</pre></div>
+
+
+<h3>Merging the Datasets</h3>
+<p>We now have 3 cleaned datasets to use in our model training, but to use all of them we need to combine them into 1 cohesive dataset. The first thing I can think of us needing to do is to remove redundant columns that the 3 datasets use for indexing rows (team number, date/time, etc.):</p>
+<div class="highlight"><pre><span></span><span class="n">match_scores_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;data/</span><span class="si">{comp_yr}</span><span class="s1">-team-match-scores.csv&#39;</span><span class="p">)</span>
+<span class="n">event_stats_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;data/</span><span class="si">{comp_yr}</span><span class="s1">-team-event-stats.csv&#39;</span><span class="p">)</span>
+<span class="n">scouting_df</span><span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;data/</span><span class="si">{comp_yr}</span><span class="s1">-scouting-reports.csv&#39;</span><span class="p">)</span>
+
+<span class="n">scouting_df</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;event_id&#39;</span><span class="p">:</span> <span class="s1">&#39;event_key&#39;</span><span class="p">,</span> <span class="s1">&#39;team_id&#39;</span><span class="p">:</span> <span class="s1">&#39;team_key&#39;</span><span class="p">},</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+<span class="c1"># merge match and event stats</span>
+<span class="n">merged_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">merge</span><span class="p">(</span><span class="n">match_scores_df</span><span class="p">,</span> <span class="n">event_stats_df</span><span class="p">,</span> <span class="n">how</span><span class="o">=</span><span class="s1">&#39;left&#39;</span><span class="p">,</span> <span class="n">on</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;event_key&#39;</span><span class="p">,</span> <span class="s1">&#39;team_key&#39;</span><span class="p">])</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">merged_df</span><span class="p">))</span>
+<span class="n">merged_df</span><span class="o">.</span><span class="n">head</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+
+<span class="c1"># merge in scouting</span>
+<span class="n">merged_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">merge</span><span class="p">(</span><span class="n">merged_df</span><span class="p">,</span> <span class="n">scouting_df</span><span class="p">,</span> <span class="n">how</span><span class="o">=</span><span class="s1">&#39;left&#39;</span><span class="p">,</span> <span class="n">on</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;event_key&#39;</span><span class="p">,</span> <span class="s1">&#39;match_key&#39;</span><span class="p">,</span> <span class="s1">&#39;team_key&#39;</span><span class="p">])</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">merged_df</span><span class="p">))</span>
+<span class="n">merged_df</span><span class="o">.</span><span class="n">head</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+
+<span class="c1"># sort by match date desc.</span>
+<span class="n">merged_df</span><span class="o">.</span><span class="n">sort_values</span><span class="p">(</span><span class="n">by</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;event_week&#39;</span><span class="p">,</span> <span class="s1">&#39;event_key&#39;</span><span class="p">,</span> <span class="s1">&#39;actual_time&#39;</span><span class="p">,</span> <span class="s1">&#39;tba_alliance&#39;</span><span class="p">,</span> <span class="s1">&#39;scored_at&#39;</span><span class="p">],</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+<span class="c1"># deleting duplicate rows due to scouter error</span>
+<span class="n">dups_df</span> <span class="o">=</span> <span class="n">merged_df</span><span class="p">[</span><span class="n">merged_df</span><span class="o">.</span><span class="n">duplicated</span><span class="p">(</span><span class="n">subset</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;event_key&#39;</span><span class="p">,</span> <span class="s1">&#39;match_key&#39;</span><span class="p">,</span> <span class="s1">&#39;team_key&#39;</span><span class="p">],</span> <span class="n">keep</span><span class="o">=</span><span class="s1">&#39;first&#39;</span><span class="p">)]</span>
+<span class="nb">len</span><span class="p">(</span><span class="n">dups_df</span><span class="p">)</span>
+
+<span class="n">merged_df</span><span class="o">.</span><span class="n">drop_duplicates</span><span class="p">(</span><span class="n">subset</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;event_key&#39;</span><span class="p">,</span> <span class="s1">&#39;match_key&#39;</span><span class="p">,</span> <span class="s1">&#39;team_key&#39;</span><span class="p">],</span> <span class="n">keep</span><span class="o">=</span><span class="s1">&#39;first&#39;</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+<span class="c1"># save merged dataframe</span>
+<span class="n">non_sorted</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;event_key&#39;</span><span class="p">,</span> <span class="s1">&#39;match_key&#39;</span><span class="p">,</span> <span class="s1">&#39;team_key&#39;</span><span class="p">,</span> <span class="s1">&#39;event_week&#39;</span><span class="p">,</span> <span class="s1">&#39;actual_time&#39;</span><span class="p">,</span>
+             <span class="s1">&#39;predicted_time&#39;</span><span class="p">,</span> <span class="s1">&#39;post_result_time&#39;</span><span class="p">,</span> <span class="s1">&#39;time&#39;</span><span class="p">,</span> <span class="s1">&#39;scored_at&#39;</span><span class="p">]</span>
+
+<span class="n">merged_col_order</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;event_key&#39;</span><span class="p">,</span> <span class="s1">&#39;match_key&#39;</span><span class="p">,</span> <span class="s1">&#39;team_key&#39;</span><span class="p">,</span> <span class="s1">&#39;event_week&#39;</span><span class="p">,</span> <span class="s1">&#39;actual_time&#39;</span><span class="p">,</span> <span class="s1">&#39;scored_at&#39;</span><span class="p">]</span> <span class="o">+</span> \
+                   <span class="nb">list</span><span class="p">(</span><span class="n">merged_df</span><span class="o">.</span><span class="n">columns</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="n">non_sorted</span><span class="p">))</span> <span class="o">+</span> \
+                   <span class="p">[</span><span class="s1">&#39;predicted_time&#39;</span><span class="p">,</span> <span class="s1">&#39;post_result_time&#39;</span><span class="p">,</span> <span class="s1">&#39;time&#39;</span><span class="p">]</span>
+
+<span class="n">merged_df</span> <span class="o">=</span> <span class="n">merged_df</span><span class="o">.</span><span class="n">reindex</span><span class="p">(</span><span class="n">merged_col_order</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+</pre></div>
+
+
+<p>We now have a merged dataframe that's (almost) ready for DL. Time to save it as a csv and finish up our data cleaning with some preprocessing:</p>
+<div class="highlight"><pre><span></span><span class="n">merged_df</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span><span class="n">merged_file</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+</pre></div>
+
+
+<h3>Preprocessing</h3>
+<p>After some trial and error when trying to train my models on the merged dataset, there have been a few things I've missed that are making my accuracy very low or were just preventing me from training anything all together.</p>
+<p>To start, pandas needs date and time columns to be specified:</p>
+<div class="highlight"><pre><span></span><span class="c1"># specify datatypes that pandas cannot infer, including datetime columns</span>
+<span class="n">date_cols</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;actual_time&#39;</span><span class="p">,</span> <span class="s1">&#39;post_result_time&#39;</span><span class="p">,</span> <span class="s1">&#39;predicted_time&#39;</span><span class="p">,</span> <span class="s1">&#39;time&#39;</span><span class="p">,</span> <span class="s1">&#39;scored_at&#39;</span><span class="p">]</span>
+
+<span class="c1"># get matches</span>
+<span class="n">merged_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">merged_file</span><span class="p">,</span> <span class="n">parse_dates</span><span class="o">=</span><span class="n">date_cols</span><span class="p">,</span> <span class="n">low_memory</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="n">merged_df</span><span class="o">.</span><span class="n">sort_values</span><span class="p">(</span><span class="n">by</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;event_week&#39;</span><span class="p">,</span> <span class="s1">&#39;event_key&#39;</span><span class="p">,</span> <span class="s1">&#39;actual_time&#39;</span><span class="p">,</span> <span class="s1">&#39;tba_alliance&#39;</span><span class="p">,</span> <span class="s1">&#39;scored_at&#39;</span><span class="p">],</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">merged_df</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+<span class="n">merged_df</span><span class="o">.</span><span class="n">head</span><span class="p">()</span>
+</pre></div>
+
+
+<p><img alt="img" src="images/scouting_app/jnb_6.png"></p>
+<h4>Cleaning the Training Data</h4>
+<p>There are a lot of discrepancies with what TBA and scouters are putting down for end game scoring elements, and we may not want to use them in our models as they are messing with our results. Let's do some cleaning and make sure all the end game data matches up:</p>
+<div class="highlight"><pre><span></span><span class="n">cols</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;rating_scoring_climb&#39;</span><span class="p">,</span> <span class="s1">&#39;rating_scoring_number_of_robots_lifted&#39;</span><span class="p">,</span> <span class="s1">&#39;rating_scoring_park&#39;</span><span class="p">]</span>
+
+<span class="c1"># if endgame == &quot;Parking&quot;, then set scouting&#39;s climb and # of robots lifted = 0 and parking = 1</span>
+<span class="n">merged_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[(</span><span class="n">merged_df</span><span class="o">.</span><span class="n">scored_at</span><span class="o">.</span><span class="n">isnull</span><span class="p">()</span> <span class="o">!=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">&amp;</span>
+                <span class="p">(</span><span class="n">merged_df</span><span class="o">.</span><span class="n">tba_endgame_robot</span> <span class="o">==</span> <span class="s1">&#39;Parking&#39;</span><span class="p">),</span> <span class="n">cols</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span>
+
+<span class="c1"># if endgame == &quot;Levitate&quot;, then set scouting&#39;s climb and # of robots lifted = 0</span>
+<span class="n">merged_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[(</span><span class="n">merged_df</span><span class="o">.</span><span class="n">scored_at</span><span class="o">.</span><span class="n">isnull</span><span class="p">()</span> <span class="o">!=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">&amp;</span>
+             <span class="p">(</span><span class="n">merged_df</span><span class="o">.</span><span class="n">tba_endgame_robot</span> <span class="o">==</span> <span class="s1">&#39;Levitate&#39;</span><span class="p">),</span> <span class="n">cols</span><span class="p">[:</span><span class="mi">2</span><span class="p">]]</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span><span class="mi">0</span>
+
+<span class="c1"># if endgame == &quot;Climbing&quot;, set parking = 0</span>
+<span class="n">merged_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[(</span><span class="n">merged_df</span><span class="o">.</span><span class="n">scored_at</span><span class="o">.</span><span class="n">isnull</span><span class="p">()</span> <span class="o">!=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">&amp;</span>
+             <span class="p">(</span><span class="n">merged_df</span><span class="o">.</span><span class="n">tba_endgame_robot</span> <span class="o">==</span> <span class="s1">&#39;Climbing&#39;</span><span class="p">),</span> <span class="p">[</span><span class="n">cols</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">cols</span><span class="p">[</span><span class="mi">2</span><span class="p">]]]</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span><span class="mi">0</span>
+
+<span class="c1"># if endgame == &quot;Climbing&quot;, set climbs = 1 if climbing count == 1</span>
+<span class="n">merged_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[(</span><span class="n">merged_df</span><span class="o">.</span><span class="n">scored_at</span><span class="o">.</span><span class="n">isnull</span><span class="p">()</span> <span class="o">!=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">&amp;</span>
+                <span class="p">(</span><span class="n">merged_df</span><span class="o">.</span><span class="n">tba_endgame_robot</span> <span class="o">==</span> <span class="s1">&#39;Climbing&#39;</span><span class="p">)</span> <span class="o">&amp;</span>
+                <span class="p">(</span><span class="n">merged_df</span><span class="o">.</span><span class="n">tba_endgame_robot_climb_count</span> <span class="o">==</span> <span class="mi">1</span><span class="p">),</span> <span class="n">cols</span><span class="p">[:</span><span class="mi">2</span><span class="p">]]</span> <span class="o">=</span> <span class="mi">1</span>
+
+<span class="c1"># if tba_auto_robot == &quot;1&quot;, then set scouting&#39;s rating_scoring_base_line_auto_made = 1</span>
+<span class="n">merged_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[(</span><span class="n">merged_df</span><span class="o">.</span><span class="n">scored_at</span><span class="o">.</span><span class="n">isnull</span><span class="p">()</span> <span class="o">!=</span> <span class="kc">True</span><span class="p">),</span>
+             <span class="s1">&#39;rating_scoring_base_line_auto_made&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">merged_df</span><span class="o">.</span><span class="n">tba_auto_robot</span> <span class="o">==</span> <span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int64</span><span class="p">)</span>
+</pre></div>
+
+
+<h4>Adding Rolling Mean to TBA Data</h4>
+<p>A rolling mean is essentially a window that looks takes a grouping of values and returns a mean, with this window moving as more data is entered/received. With TBA data, it would make more sense for us to look at a rolling mean of values as the data we get from them (OPRS, scale ownership points, etc.) are all overall values for a team as it played on an alliance of 3 robots. If we want more <em>team specific</em> stats, using a rolling average over a set number of match numbers would make more sense. Let's make that new data frame for tba rolling columns:</p>
+<div class="highlight"><pre><span></span><span class="n">tba_rolling_cols</span> <span class="o">=</span> <span class="p">[</span> <span class="n">c</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">merged_df</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">regex</span><span class="o">=</span><span class="s1">&#39;^tba_&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">columns</span>
+                  <span class="k">if</span> <span class="n">c</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span>
+                      <span class="s1">&#39;tba_alliance&#39;</span><span class="p">,</span> <span class="s1">&#39;tba_alliance_team_keys&#39;</span><span class="p">,</span> <span class="s1">&#39;tba_comp_level&#39;</span><span class="p">,</span><span class="s1">&#39;tba_match_number&#39;</span><span class="p">,</span>
+                      <span class="s1">&#39;tba_set_number&#39;</span><span class="p">,</span><span class="s1">&#39;tba_alliance_robot_pos&#39;</span><span class="p">,</span> <span class="s1">&#39;tba_event_week&#39;</span><span class="p">,</span> <span class="s1">&#39;tba_year&#39;</span><span class="p">,</span>
+                      <span class="s1">&#39;tba_tba_game_data&#39;</span><span class="p">,</span> <span class="s1">&#39;tba_is_winner&#39;</span><span class="p">,</span><span class="s1">&#39;tba_auto_robot&#39;</span><span class="p">,</span>
+                      <span class="s1">&#39;tba_auto_robot1&#39;</span><span class="p">,</span> <span class="s1">&#39;tba_auto_robot2&#39;</span><span class="p">,</span> <span class="s1">&#39;tba_auto_robot3&#39;</span><span class="p">,</span>
+                      <span class="s1">&#39;tba_endgame_robot&#39;</span><span class="p">,</span><span class="s1">&#39;tba_endgame_robot1&#39;</span><span class="p">,</span> <span class="s1">&#39;tba_endgame_robot2&#39;</span><span class="p">,</span> <span class="s1">&#39;tba_endgame_robot3&#39;</span><span class="p">]</span>
+                  <span class="p">]</span>
+
+<span class="n">tba_rolling_new_cols</span> <span class="o">=</span> <span class="p">[</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{c}</span><span class="s1">_rolling&#39;</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">tba_rolling_cols</span> <span class="p">]</span>
+
+<span class="n">g</span> <span class="o">=</span> <span class="n">merged_df</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="n">by</span><span class="o">=</span><span class="s1">&#39;team_key&#39;</span><span class="p">)[</span><span class="n">tba_rolling_cols</span><span class="p">]</span>
+<span class="n">merged_df</span><span class="p">[</span><span class="n">tba_rolling_new_cols</span><span class="p">]</span> <span class="o">=</span> <span class="n">g</span><span class="o">.</span><span class="n">rolling</span><span class="p">(</span><span class="n">window</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">min_periods</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</pre></div>
+
+
+<p>We won't do this for scouting data because the scouting data is already team specific, so there's no need to take grouped averages of data that already is as "exact" as it could be for a team.</p>
+<h4>Additional Feature Engineering</h4>
+<p>There's a few more things to do before we train our models. Some of the feature engineering we'll do is purely for experimental use as this is the first time I've ever done any of the ML work on FRC robot/scouting data however. Anyways, let's try some things out:</p>
+<p>Let's add minutes between matches. Maybe a quicker match turnaround doesn't affect very consistently performing teams. Or maybe we find something else:</p>
+<div class="highlight"><pre><span></span><span class="n">merged_df</span><span class="p">[</span><span class="s1">&#39;mins_since_last_match&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">merged_df</span><span class="o">.</span><span class="n">groupby</span><span class="p">([</span><span class="s1">&#39;team_key&#39;</span><span class="p">,</span> <span class="s1">&#39;event_key&#39;</span><span class="p">])[</span><span class="s1">&#39;actual_time&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span>
+   <span class="k">lambda</span> <span class="n">r</span><span class="p">:</span> <span class="p">(</span><span class="n">r</span> <span class="o">-</span> <span class="n">r</span><span class="o">.</span><span class="n">shift</span><span class="p">(</span><span class="mi">1</span><span class="p">))</span><span class="o">.</span><span class="n">dt</span><span class="o">.</span><span class="n">seconds</span> <span class="o">//</span> <span class="mi">60</span><span class="p">)</span><span class="o">.</span><span class="n">fillna</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+
+<span class="n">merged_df</span><span class="p">[</span><span class="n">merged_df</span><span class="o">.</span><span class="n">team_key</span><span class="o">==</span><span class="s1">&#39;frc2102&#39;</span><span class="p">][[</span><span class="s1">&#39;actual_time&#39;</span><span class="p">,</span> <span class="s1">&#39;mins_since_last_match&#39;</span><span class="p">]]</span><span class="o">.</span><span class="n">head</span><span class="p">()</span>
+</pre></div>
+
+
+<p><img alt="img" src="images/scouting_app/jnb_7.png"></p>
+<p>To make displaying our results to other teams easier, let's add in custom metrics that analyse the core game &amp; scoring elements from a 1-10 scale. By grouping columns together we can provide a quick "summary" to teams that we'd otherwise have to explain how they relate to each other &amp; their importance in relation to the game and opposing teams which would be a inconvenience if we had to do that to every team we spoke to during pre-match strategy. We need to be smart when we're grouping metrics together because if we just start picking random columns to pair up, we could be missing out on critical data points and making poor decisions:</p>
+<div class="highlight"><pre><span></span><span class="c1"># filter to only include rows with scouting scores</span>
+<span class="n">team_ratings_df</span> <span class="o">=</span> <span class="n">merged_df</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">regex</span><span class="o">=</span><span class="s1">&#39;^rating_.*|team_key&#39;</span><span class="p">)[</span><span class="n">merged_df</span><span class="o">.</span><span class="n">scored_at</span><span class="o">.</span><span class="n">isnull</span><span class="p">()</span> <span class="o">!=</span> <span class="kc">True</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+<span class="n">team_ratings_g</span> <span class="o">=</span> <span class="n">team_ratings_df</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s1">&#39;team_key&#39;</span><span class="p">)</span>
+
+<span class="n">ability_to_climb</span> <span class="o">=</span>  <span class="n">team_ratings_g</span><span class="o">.</span><span class="n">rating_scoring_climb</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
+<span class="n">ability_to_lift</span> <span class="o">=</span> <span class="n">team_ratings_g</span><span class="o">.</span><span class="n">rating_scoring_number_of_robots_lifted</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
+
+<span class="n">ability_to_scale_auto</span> <span class="o">=</span> <span class="n">team_ratings_g</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span>
+       <span class="n">x</span><span class="p">[</span><span class="n">x</span><span class="o">.</span><span class="n">rating_attempted_scale_auto</span> <span class="o">==</span> <span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">rating_overall_scale_efficiency_auto</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span> <span class="o">*</span>
+       <span class="n">x</span><span class="p">[</span><span class="n">x</span><span class="o">.</span><span class="n">rating_attempted_scale_auto</span> <span class="o">==</span> <span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">rating_scoring_cubes_on_scale_auto_made</span><span class="o">.</span><span class="n">mean</span><span class="p">())</span>
+
+<span class="n">ability_to_scale_teleop</span> <span class="o">=</span> <span class="n">team_ratings_g</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span>
+       <span class="n">x</span><span class="p">[</span><span class="n">x</span><span class="o">.</span><span class="n">rating_attempted_scale</span> <span class="o">==</span> <span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">rating_overall_scale_efficiency</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span> <span class="o">*</span>
+       <span class="n">x</span><span class="p">[</span><span class="n">x</span><span class="o">.</span><span class="n">rating_attempted_scale</span> <span class="o">==</span> <span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">rating_scoring_cubes_on_scale_made</span><span class="o">.</span><span class="n">mean</span><span class="p">())</span>
+
+<span class="n">ability_to_switch_auto</span> <span class="o">=</span> <span class="n">team_ratings_g</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span>
+       <span class="n">x</span><span class="p">[</span><span class="n">x</span><span class="o">.</span><span class="n">rating_attempted_switch_auto</span> <span class="o">==</span> <span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">rating_overall_switch_efficiency_auto</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span> <span class="o">*</span>
+       <span class="n">x</span><span class="p">[</span><span class="n">x</span><span class="o">.</span><span class="n">rating_attempted_switch_auto</span> <span class="o">==</span> <span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">rating_scoring_cubes_on_switch_auto_made</span><span class="o">.</span><span class="n">mean</span><span class="p">())</span>
+
+<span class="n">ability_to_switch_teleop</span> <span class="o">=</span> <span class="n">team_ratings_g</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span>
+       <span class="n">x</span><span class="p">[</span><span class="n">x</span><span class="o">.</span><span class="n">rating_attempted_switch</span> <span class="o">==</span> <span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">rating_overall_switch_efficiency</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span> <span class="o">*</span>
+       <span class="n">x</span><span class="p">[</span><span class="n">x</span><span class="o">.</span><span class="n">rating_attempted_switch</span> <span class="o">==</span> <span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">rating_scoring_cubes_on_switch_made</span><span class="o">.</span><span class="n">mean</span><span class="p">())</span>
+
+<span class="n">ability_to_exchange_teleop</span> <span class="o">=</span> <span class="n">team_ratings_g</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span>
+       <span class="n">x</span><span class="p">[</span><span class="n">x</span><span class="o">.</span><span class="n">rating_attempted_exchange</span> <span class="o">==</span> <span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">rating_overall_exchange_efficiency</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span> <span class="o">*</span>
+       <span class="n">x</span><span class="p">[</span><span class="n">x</span><span class="o">.</span><span class="n">rating_attempted_exchange</span> <span class="o">==</span> <span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">rating_scoring_cubes_exchanged_made</span><span class="o">.</span><span class="n">mean</span><span class="p">())</span>
+
+<span class="n">team_ratings_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">([</span>
+   <span class="n">ability_to_climb</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="s1">&#39;ability_to_climb&#39;</span><span class="p">),</span>
+   <span class="n">ability_to_lift</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="s1">&#39;ability_to_lift&#39;</span><span class="p">),</span>
+   <span class="n">ability_to_scale_auto</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="s1">&#39;ability_to_scale_auto&#39;</span><span class="p">),</span>
+   <span class="n">ability_to_scale_teleop</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="s1">&#39;ability_to_scale_teleop&#39;</span><span class="p">),</span>
+   <span class="n">ability_to_switch_auto</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="s1">&#39;ability_to_switch_auto&#39;</span><span class="p">),</span>
+   <span class="n">ability_to_switch_teleop</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="s1">&#39;ability_to_switch_teleop&#39;</span><span class="p">),</span>
+   <span class="n">ability_to_exchange_teleop</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="s1">&#39;ability_to_exchange_teleop&#39;</span><span class="p">)],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">reset_index</span><span class="p">()</span>
+
+<span class="n">team_ratings_df</span><span class="p">[</span><span class="n">team_ratings_df</span><span class="o">.</span><span class="n">team_key</span><span class="o">==</span><span class="s1">&#39;frc2102&#39;</span><span class="p">]</span>
+</pre></div>
+
+
+<p><img alt="img" src="images/scouting_app/jnb_8.png"></p>
+<p>Right now these values aren't normalized or on a 1-10 scale, so let's fix that:</p>
+<div class="highlight"><pre><span></span><span class="c1"># normalize ability ratings to be between 0 and 1</span>
+<span class="n">cols</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">team_ratings_df</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">regex</span><span class="o">=</span><span class="s1">&#39;^ability_to_.*&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">columns</span><span class="p">)</span>
+<span class="n">team_ratings_df</span><span class="p">[</span><span class="n">cols</span><span class="p">]</span> <span class="o">=</span> <span class="n">team_ratings_df</span><span class="p">[</span><span class="n">cols</span><span class="p">]</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="p">(</span><span class="n">x</span> <span class="o">-</span> <span class="n">x</span><span class="o">.</span><span class="n">min</span><span class="p">())</span> <span class="o">/</span> <span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">max</span><span class="p">()</span> <span class="o">-</span> <span class="n">x</span><span class="o">.</span><span class="n">min</span><span class="p">()))</span>
+
+<span class="c1"># scale the ability ratings to be between 1 and 10</span>
+<span class="n">min_score</span> <span class="o">=</span> <span class="mi">1</span>
+<span class="n">max_score</span> <span class="o">=</span> <span class="mi">10</span>
+
+<span class="n">team_ratings_df</span><span class="p">[</span><span class="n">cols</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">((</span><span class="n">team_ratings_df</span><span class="p">[</span><span class="n">cols</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span><span class="n">max_score</span> <span class="o">-</span> <span class="n">min_score</span><span class="p">))</span> <span class="o">+</span> <span class="n">min_score</span><span class="p">)</span>
+
+<span class="n">team_ratings_df</span> <span class="o">=</span> <span class="n">team_ratings_df</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">team_ratings_df</span><span class="o">.</span><span class="n">fillna</span><span class="p">(</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+<span class="n">team_ratings_df</span><span class="o">.</span><span class="n">head</span><span class="p">()</span>
+</pre></div>
+
+
+<p><img alt="img" src="images/scouting_app/jnb_9.png"></p>
+<p>Now we can view a summary of how all of the robots in the 2018 Turing Division stack up against each other:</p>
+<div class="highlight"><pre><span></span><span class="n">DataFrameSummary</span><span class="p">(</span><span class="n">team_ratings_df</span><span class="p">)</span><span class="o">.</span><span class="n">summary</span><span class="p">()</span>
+</pre></div>
+
+
+<p><img alt="img" src="images/scouting_app/jnb_10.png"></p>
+<p>Finally, let's merge our newly created dataframe with 1-10 metrics and our complete TBA and Scouting dataframe. We'll arrange our column order to clean things up, and then export our complete dataframe to a csv for Deep Learning:</p>
+<div class="highlight"><pre><span></span><span class="c1"># merge in ability ratings</span>
+<span class="n">merged_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">merge</span><span class="p">(</span><span class="n">merged_df</span><span class="p">,</span> <span class="n">team_ratings_df</span><span class="p">,</span> <span class="n">how</span><span class="o">=</span><span class="s1">&#39;left&#39;</span><span class="p">,</span> <span class="n">on</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;team_key&#39;</span><span class="p">])</span>
+
+<span class="n">non_sorted</span> <span class="o">=</span> <span class="p">[</span>
+   <span class="s1">&#39;event_key&#39;</span><span class="p">,</span> <span class="s1">&#39;match_key&#39;</span><span class="p">,</span> <span class="s1">&#39;team_key&#39;</span><span class="p">,</span> <span class="s1">&#39;event_week&#39;</span><span class="p">,</span> <span class="s1">&#39;actual_time&#39;</span><span class="p">,</span> <span class="s1">&#39;mins_since_last_match&#39;</span><span class="p">,</span>
+   <span class="s1">&#39;predicted_time&#39;</span><span class="p">,</span> <span class="s1">&#39;post_result_time&#39;</span><span class="p">,</span> <span class="s1">&#39;time&#39;</span><span class="p">,</span> <span class="s1">&#39;scored_at&#39;</span>
+<span class="p">]</span>
+
+<span class="n">merged_col_order</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;event_key&#39;</span><span class="p">,</span> <span class="s1">&#39;match_key&#39;</span><span class="p">,</span> <span class="s1">&#39;team_key&#39;</span><span class="p">,</span> <span class="s1">&#39;event_week&#39;</span><span class="p">,</span> <span class="s1">&#39;actual_time&#39;</span><span class="p">,</span> <span class="s1">&#39;mins_since_last_match&#39;</span><span class="p">,</span> <span class="s1">&#39;scored_at&#39;</span><span class="p">]</span> <span class="o">+</span> \
+   <span class="nb">sorted</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">merged_df</span><span class="o">.</span><span class="n">columns</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="n">non_sorted</span><span class="p">)))</span> <span class="o">+</span> \
+   <span class="p">[</span><span class="s1">&#39;predicted_time&#39;</span><span class="p">,</span> <span class="s1">&#39;post_result_time&#39;</span><span class="p">,</span> <span class="s1">&#39;time&#39;</span><span class="p">]</span>
+
+<span class="n">merged_df</span> <span class="o">=</span> <span class="n">merged_df</span><span class="o">.</span><span class="n">reindex</span><span class="p">(</span><span class="n">merged_col_order</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+<span class="n">merged_df</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span><span class="n">pp_file</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+</pre></div>
+            </div>
+            <!-- /.entry-content -->
+        </article>
+    </section>
+
+        </div>
+    </div>
+</div>
+<!-- End Content Container -->
+
+<footer>
+   <div class="container">
+      <hr>
+      <div class="row">
+         <div class="col-xs-10">&copy; 2020 Wayde Gilliam
+            &middot; Powered by <a href="https://github.com/getpelican/pelican-themes/tree/master/pelican-bootstrap3" target="_blank">pelican-bootstrap3</a>,
+            <a href="http://docs.getpelican.com/" target="_blank">Pelican</a>,
+            <a href="http://getbootstrap.com" target="_blank">Bootstrap</a>         </div>
+         <div class="col-xs-2"><p class="pull-right"><i class="fa fa-arrow-up"></i> <a href="#">Back to top</a></p></div>
+      </div>
+   </div>
+</footer>
+<script src="https://waydegg.com/theme/js/jquery.min.js"></script>
+
+<!-- Include all compiled plugins (below), or include individual files as needed -->
+<script src="https://waydegg.com/theme/js/bootstrap.min.js"></script>
+
+<!-- Enable responsive features in IE8 with Respond.js (https://github.com/scottjehl/Respond) -->
+<script src="https://waydegg.com/theme/js/respond.min.js"></script>
+
+
+    <script src="https://waydegg.com/theme/js/bodypadding.js"></script>
+    <!-- Google Analytics -->
+    <script type="text/javascript">
+
+        var _gaq = _gaq || [];
+        _gaq.push(['_setAccount', 'UA-156477838-1']);
+        _gaq.push(['_trackPageview']);
+
+        (function () {
+            var ga = document.createElement('script');
+            ga.type = 'text/javascript';
+            ga.async = true;
+            ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+            var s = document.getElementsByTagName('script')[0];
+            s.parentNode.insertBefore(ga, s);
+        })();
+    </script>
+    <!-- End Google Analytics Code -->
+
+
+</body>
+</html>

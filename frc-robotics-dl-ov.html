@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en" prefix="og: http://ogp.me/ns# fb: https://www.facebook.com/2008/fbml">
+<head>
+    <title>DL/ML in FRC Robotics Scouting/Strategy - waydegg.com</title>
+    <!-- Using the latest rendering mode for IE -->
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+
+
+<link rel="canonical" href="https://waydegg.com/frc-robotics-dl-ov.html">
+
+        <meta name="author" content="Wayde Gilliam" />
+        <meta name="keywords" content="personal projects,robotics,scouting,deep learning" />
+        <meta name="description" content="Using predictive analytics and deep learning to scout the best robots" />
+
+        <meta property="og:site_name" content="waydegg.com" />
+        <meta property="og:type" content="article"/>
+        <meta property="og:title" content="DL/ML in FRC Robotics Scouting/Strategy"/>
+        <meta property="og:url" content="https://waydegg.com/frc-robotics-dl-ov.html"/>
+        <meta property="og:description" content="Using predictive analytics and deep learning to scout the best robots"/>
+        <meta property="article:published_time" content="2018-10-25" />
+            <meta property="article:section" content="articles" />
+            <meta property="article:tag" content="personal projects" />
+            <meta property="article:tag" content="robotics" />
+            <meta property="article:tag" content="scouting" />
+            <meta property="article:tag" content="deep learning" />
+            <meta property="article:author" content="Wayde Gilliam" />
+
+
+
+    <!-- Bootstrap -->
+        <link rel="stylesheet" href="https://waydegg.com/theme/css/bootstrap.simplex.min.css" type="text/css"/>
+    <link href="https://waydegg.com/theme/css/font-awesome.min.css" rel="stylesheet">
+
+    <link href="https://waydegg.com/theme/css/pygments/monokai.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://waydegg.com/theme/css/style.css" type="text/css"/>
+        <link href="https://waydegg.com/extra/custom.css" rel="stylesheet">
+
+        <link href="https://waydegg.com/feeds/all.atom.xml" type="application/atom+xml" rel="alternate"
+              title="waydegg.com ATOM Feed"/>
+
+
+</head>
+<body>
+
+<div class="navbar navbar-default navbar-fixed-top" role="navigation">
+    <div class="container">
+        <div class="navbar-header">
+            <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-ex1-collapse">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+            <a href="https://waydegg.com/" class="navbar-brand">
+waydegg.com            </a>
+        </div>
+        <div class="collapse navbar-collapse navbar-ex1-collapse">
+            <ul class="nav navbar-nav">
+                         <li><a href="https://waydegg.com/pages/about.html">
+                             About
+                          </a></li>
+            </ul>
+            <ul class="nav navbar-nav navbar-right">
+            </ul>
+        </div>
+        <!-- /.navbar-collapse -->
+    </div>
+</div> <!-- /.navbar -->
+
+<!-- Banner -->
+<!-- End Banner -->
+
+<!-- Content Container -->
+<div class="container">
+    <div class="row">
+        <div class="col-lg-12">
+    <section id="content">
+        <article>
+            <header class="page-header">
+                <h1>
+                    <a href="https://waydegg.com/frc-robotics-dl-ov.html"
+                       rel="bookmark"
+                       title="Permalink to DL/ML in FRC Robotics Scouting/Strategy">
+                        DL/ML in FRC Robotics Scouting/Strategy
+                    </a>
+                </h1>
+            </header>
+            <div class="entry-content">
+                <div class="panel">
+                    <div class="panel-body">
+<footer class="post-info">
+    <span class="label label-default">Date</span>
+    <span class="published">
+        <i class="fa fa-calendar"></i><time datetime="2018-10-25T12:12:00-07:00"> Thu 25 October 2018</time>
+    </span>
+
+
+
+
+
+<span class="label label-default">Tags</span>
+	<a href="https://waydegg.com/tag/personal-projects.html">personal projects</a>
+        /
+	<a href="https://waydegg.com/tag/robotics.html">robotics</a>
+        /
+	<a href="https://waydegg.com/tag/scouting.html">scouting</a>
+        /
+	<a href="https://waydegg.com/tag/deep-learning.html">deep learning</a>
+    
+</footer><!-- /.post-info -->                    </div>
+                </div>
+                <p>After having Roborecon for 2 years with its benefits clearly paying off, I wanted to see if we could push our scouting abilities even further. I had been hearing about how FRC teams are starting to use machine learning in their vision software and autonomous routines, and I was interested to see if I could apply ML/DL to scouting data and get accurate predictions. I had already gone through <a href="https://www.coursera.org/learn/machine-learning">Andrew Ng's "Machine Learning"</a> course and had just started going through <a href="fast.ai">Fastai's Practical Deep Learning for Coders Part 1</a>, so I was still very new to this field.</p>
+<p>As it turns out, yes, you can use Deep Learning in FRC scouting. There are tons of areas it can be used in. My scouting team and I determined a list of uses for the ML analysis that could potentially change the way we perform at competitions completely:</p>
+<ol>
+<li>
+<p>Correcting human error. When you're forcing the limited number of unwilling Freshmen on your team to scout during competition, they're going to mislabel data and entirely forget to scout some matches. Early in the season when we start out with having no data from teams for that year, it's critical that we correctly record how they're performing during the 8-11 qualification matches they get before alliance selections or we might miss pick a team and jeopardize our entire season.</p>
+</li>
+<li>
+<p>Predicting match and event outcomes before they've happened. There are thousands of FRC teams with hundreds competing simultaneously during competition season, so the only way we could scout all of them is with the help of ML algorithms. Going into the Turing Division in 2018 at the Houston World Championships we already had match predictions and team specific stats for the 67 teams attending, most of which we had never seen compete, thanks to Deep Learning.</p>
+</li>
+<li>
+<p>Revealing missed important match and team data. From using the Roborecon web app in the past, we'd discovered certain robot attributes that we thought mattered were irrelevant, and others we thought weren't that important actually mattered a lot. Implementing deep learning into our scouting application would only further these discoveries.</p>
+</li>
+</ol>
+<p>I'm going to assume you have a basic understanding of Python, <a href="http://jupyter.org">Jupyter Notebooks</a>, and ML/DL as I go into detail on my code and how I put everything together in this section of the writeup. Feel free to contact me with any questions or help for getting world class predictions on your own scouting data because really anyone can do this. As RoboRecon is proprietary software to Team Paradox, I'll be highlighting what code we presented at the 2018 Houston World Championships that we made public.</p>
+<hr>
+<p>This ended up being a pretty comprehensive write up, so the Data Cleaning stuff is on a separate page (can't share the modeling as its the "secret sauce" of the whole application!)</p>
+<h2><a href="/frc-robotics-dl.html">Data Cleaning</a></h2>
+            </div>
+            <!-- /.entry-content -->
+        </article>
+    </section>
+
+        </div>
+    </div>
+</div>
+<!-- End Content Container -->
+
+<footer>
+   <div class="container">
+      <hr>
+      <div class="row">
+         <div class="col-xs-10">&copy; 2020 Wayde Gilliam
+            &middot; Powered by <a href="https://github.com/getpelican/pelican-themes/tree/master/pelican-bootstrap3" target="_blank">pelican-bootstrap3</a>,
+            <a href="http://docs.getpelican.com/" target="_blank">Pelican</a>,
+            <a href="http://getbootstrap.com" target="_blank">Bootstrap</a>         </div>
+         <div class="col-xs-2"><p class="pull-right"><i class="fa fa-arrow-up"></i> <a href="#">Back to top</a></p></div>
+      </div>
+   </div>
+</footer>
+<script src="https://waydegg.com/theme/js/jquery.min.js"></script>
+
+<!-- Include all compiled plugins (below), or include individual files as needed -->
+<script src="https://waydegg.com/theme/js/bootstrap.min.js"></script>
+
+<!-- Enable responsive features in IE8 with Respond.js (https://github.com/scottjehl/Respond) -->
+<script src="https://waydegg.com/theme/js/respond.min.js"></script>
+
+
+    <script src="https://waydegg.com/theme/js/bodypadding.js"></script>
+    <!-- Google Analytics -->
+    <script type="text/javascript">
+
+        var _gaq = _gaq || [];
+        _gaq.push(['_setAccount', 'UA-156477838-1']);
+        _gaq.push(['_trackPageview']);
+
+        (function () {
+            var ga = document.createElement('script');
+            ga.type = 'text/javascript';
+            ga.async = true;
+            ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+            var s = document.getElementsByTagName('script')[0];
+            s.parentNode.insertBefore(ga, s);
+        })();
+    </script>
+    <!-- End Google Analytics Code -->
+
+
+</body>
+</html>
