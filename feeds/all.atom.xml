@@ -3,8 +3,11 @@
 &lt;p&gt;I wrote this article in late 2018 and am updating it just now. The hardware choices will be a little outdated (though still a good choice for building your first dl-rig), however all of the software/installation steps have been updated.&lt;/p&gt;
 &lt;p&gt;This article is intended to focus more on the server setup and working with multiple users at the same time, with the part assembly and software installation process being a simplified version of &lt;a href="https://blog.slavv.com/the-1700-great-deep-learning-box-assembly-setup-and-benchmarks-148c5ebe6415"&gt;Slav Ivanov’s&lt;/a&gt; article on creating your own DL Box.&lt;/p&gt;
 &lt;hr&gt;
+&lt;p&gt;&lt;strong&gt;Sponsored Message&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;If you’re looking for a pre-built deep learning system, I recommend Exxact’s Deep Learning Workstations, powered by NVIDIA RTX 2080 Ti, Tesla V100, TITAN RTX, or RTX 8000 GPUs and backed with a 3-year warranty. Their workstations start at $5,899. Check out some of their system configurations &lt;a href="https://www.exxactcorp.com/Deep-Learning-NVIDIA-GPU-Workstations?utm_source=web%20referral&amp;amp;utm_medium=backlink&amp;amp;utm_campaign=Wayde%20Gilliam"&gt;here&lt;/a&gt;!&lt;/p&gt;
+&lt;hr&gt;
 &lt;h3&gt;Intro&lt;/h3&gt;
-&lt;p&gt;I had just started going through part 1 of fast.ai’s course, “&lt;a href="http://course.fast.ai/"&gt;Practical Deep Learning for Coders&lt;/a&gt;”,  and I wanted to build my own server to train models as an upgrade from using an AWS p2 instance and storage. Realizing that I’d be using much larger data sets and not wanting to wait hours to train my models with the lack of adequate processing power, building my own DL rig was a good choice as it would save me a lot of time and money in the long run, as well as giving me good experience with putting a server together.&lt;/p&gt;
+&lt;p&gt;I had just started going through part 1 of fast.ai’s course, “&lt;a href="http://course.fast.ai/"&gt;Practical Deep Learning for Coders&lt;/a&gt;”, and I wanted to build my own server to train models as an upgrade from using an AWS p2 instance and storage. Realizing that I’d be using much larger data sets and not wanting to wait hours to train my models with the lack of adequate processing power, building my own DL rig was a good choice as it would save me a lot of time and money in the long run, as well as giving me good experience with putting a server together.&lt;/p&gt;
 &lt;h2&gt;The Build&lt;/h2&gt;
 &lt;h3&gt;Creating the Parts List&lt;/h3&gt;
 &lt;p&gt;Before putting any list of parts together, you need to decide on what you actually want out of your machine. For me, I wanted the following:&lt;/p&gt;
@@ -18,20 +21,20 @@
 &lt;p&gt;&lt;strong&gt;GPU: GTX 1080 Ti Hybrid&lt;/strong&gt;&lt;/p&gt;
 &lt;p&gt;This is the most important part in your build as you’re using your graphics card(s) to train models, so the more powerful your GPU, the faster you can work with massive datasets. A higher GPU memory equates to higher processing power (e.g., faster training, bigger batch sizes, etc…). I picked two of these cards for my server because I had room in my budget for them, and it allowed me to train my models on one of the cards and have another user train theirs on the second card. You can scale down the type of GPU you buy to fit into your budget (1070, 1060, etc.) along with preventing bottlenecking with your other parts. The Hybrid 1080 GPUs are also nice because they come with a preassembled aio water cooling system in addition to the normal fan cooling that the majority of GPUs have. 1080 Ti’s run hot when under full load, so having quality cooling is a necessity to prolong the life of your cards and retain their performance as you’re training models. For more on choosing choosing a graphics card, &lt;a href="http://timdettmers.com/2017/04/09/which-gpu-for-deep-learning/"&gt;this article&lt;/a&gt; had really helped me really understand what choices to make in regards to working in a Deep Learning environment.&lt;/p&gt;
 &lt;p&gt;&lt;strong&gt;CPU: AMD Threadripper 1900x&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;While you’re using your graphics card to train your neural networks, your CPU is still important as it’s used for operations such as data preparation, so those high core counts are going to help speed things up. I went with using the Treadripper as it’s a very new CPU on the market with very high core counts (32 cores with the TR2’s!) and their price is much lower than their intel counterparts. The 1900x is the lowest tier of the 1st get TR with only 8 cores, though my whole goal for this server is to keep it very upgradable. &lt;/p&gt;
-&lt;p&gt;One thing to note is that when you’re choosing a CPU, make sure you have 8 or 16 pcie slots available for your graphics cards, as that’s when they perform best under load or you risk bottlenecking your system. On higher end CPUs, you’re pretty much guaranteed enough pcie slots if you had 4 graphics cards in your server. &lt;/p&gt;
+&lt;p&gt;While you’re using your graphics card to train your neural networks, your CPU is still important as it’s used for operations such as data preparation, so those high core counts are going to help speed things up. I went with using the Treadripper as it’s a very new CPU on the market with very high core counts (32 cores with the TR2’s!) and their price is much lower than their intel counterparts. The 1900x is the lowest tier of the 1st get TR with only 8 cores, though my whole goal for this server is to keep it very upgradable.&lt;/p&gt;
+&lt;p&gt;One thing to note is that when you’re choosing a CPU, make sure you have 8 or 16 pcie slots available for your graphics cards, as that’s when they perform best under load or you risk bottlenecking your system. On higher end CPUs, you’re pretty much guaranteed enough pcie slots if you had 4 graphics cards in your server.&lt;/p&gt;
 &lt;p&gt;&lt;strong&gt;Motherboard: MSI X399 SLI Plus&lt;/strong&gt;&lt;/p&gt;
 &lt;p&gt;Opted for this board as it’s a full ATX board with room for 4 gpus, along with a max of 128GB of RAM. As I said earlier, one of the main goals for this server is to keep it very upgradable.&lt;/p&gt;
 &lt;p&gt;&lt;strong&gt;Memory: 32GB Corsair Vengeance LPX DDR4 (2 x 16GB)&lt;/strong&gt;&lt;/p&gt;
 &lt;p&gt;More memory makes working with big datasets easier. The next thing I plan on upgrading is adding another 2 sticks of 16GB RAM, which is why I didn’t get quad channel ram (4 x 8GB sticks) even though it would make my performance a bit higher.&lt;/p&gt;
 &lt;p&gt;&lt;strong&gt;Storage: 256GB Samsung SSD &amp;amp; 2TB HDD&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;I put Ubuntu, all my libraries, and the current datasat I’m working with on the SSD, and all of the other data I have stored on the the 2TB mechanical Hard Drive. &lt;/p&gt;
+&lt;p&gt;I put Ubuntu, all my libraries, and the current datasat I’m working with on the SSD, and all of the other data I have stored on the the 2TB mechanical Hard Drive.&lt;/p&gt;
 &lt;p&gt;&lt;strong&gt;Cooler: Corsair H100i v2 Liquid Cooler&lt;/strong&gt;&lt;/p&gt;
 &lt;p&gt;Threadrippers don’t come with a stock cooler (and you should pretty much always upgrade to at least a cheap aftermarket cooler if you’ve got $30 to spare) so I wanted something that was reliable for 24/7 use, cheap, and easy to maintenance. This all-in-one cooler was super easy to install and very reliable (there are maybe 1 or 2 cases out of hundreds of thousands of units that happen to leak coolant), and it’s dead silent.&lt;/p&gt;
 &lt;p&gt;&lt;strong&gt;Power Supply: EVGA SuperNOVA 1000w 80+ Gold Certified&lt;/strong&gt;&lt;/p&gt;
 &lt;p&gt;Always get a PSU with more wattage than you technically need. PCPartpicker’s wattage calculator is nice to get a general idea of how much you’ll be pulling (in my case 824w), though it’s often times inaccurate by varying amounts so it’s best to play it safe to prevent your computer from not turning on. The “Gold Certified” is just referring to how efficient the PSU is (how much power is wasted as heat).&lt;/p&gt;
 &lt;p&gt;&lt;strong&gt;Case: Corsair 760T Full Tower&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;I got this case because of how much space there is inside it and for its price. While it doesn’t make your models train faster, the clear side panel and red LEDs do make you look a lot cooler. &lt;/p&gt;
+&lt;p&gt;I got this case because of how much space there is inside it and for its price. While it doesn’t make your models train faster, the clear side panel and red LEDs do make you look a lot cooler.&lt;/p&gt;
 &lt;hr&gt;
 &lt;p&gt;&lt;img alt="Computer parts" src="images/dl-rig_images/parts.jpg"&gt;&lt;/p&gt;
 &lt;p&gt;A year’s worth of rigorous saving and graduation money in one picture&lt;/p&gt;
@@ -63,10 +66,12 @@ Photo credit to &lt;a href="https://blog.slavv.com/the-1700-great-deep-learning-
 &lt;p&gt;The next step is to install your OS. I’m using Linux since that’s what most DL frameworks are designed for. I went with Ubuntu Desktop v16.04 LTS and installed everything from a USB drive. There are a lot of free tools like &lt;a href="https://unetbootin.github.io/#install"&gt;UNetbootin&lt;/a&gt; or &lt;a href="https://rufus.akeo.ie/"&gt;Rufus&lt;/a&gt; (Windows only) you can download to prepare your thumb drive. &lt;a href="https://tutorials.ubuntu.com/tutorial/tutorial-create-a-usb-stick-on-macos?_ga=2.169997348.541383618.1529376295-1852780805.1529376295#0"&gt;Here’s a helpful tutorial&lt;/a&gt; going through the full process of creating a bootable USB on a Mac and &lt;a href="https://www.howtogeek.com/howto/linux/create-a-bootable-ubuntu-usb-flash-drive-the-easy-way/"&gt;this one&lt;/a&gt; if you’re using Windows.&lt;/p&gt;
 &lt;h3&gt;Setting up SSH&lt;/h3&gt;
 &lt;p&gt;&lt;strong&gt;Step 1: Port Forwarding&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;You’ll have to go through a similar process with all routers, but since I have an apple router I followed through &lt;a href="https://portforward.com/apple/"&gt;this guide&lt;/a&gt; do the following:
-1. Set a static IP for your server so that it doesn’t change every time it shuts off.
-2. Log into your router using Apple Airport Utility
-3. Map the port for the server. You’ll need to find the MAC address of your server for this part, so see &lt;a href="http://technologyinfinite.blogspot.com/2016/07/three-simple-ways-to-find-mac-address.html"&gt;this guide&lt;/a&gt; for how to find it on Ubuntu.&lt;/p&gt;
+&lt;p&gt;You’ll have to go through a similar process with all routers, but since I have an apple router I followed through &lt;a href="https://portforward.com/apple/"&gt;this guide&lt;/a&gt; do the following:&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;Set a static IP for your server so that it doesn’t change every time it shuts off.&lt;/li&gt;
+&lt;li&gt;Log into your router using Apple Airport Utility&lt;/li&gt;
+&lt;li&gt;Map the port for the server. You’ll need to find the MAC address of your server for this part, so see &lt;a href="http://technologyinfinite.blogspot.com/2016/07/three-simple-ways-to-find-mac-address.html"&gt;this guide&lt;/a&gt; for how to find it on Ubuntu.&lt;/li&gt;
+&lt;/ol&gt;
 &lt;p&gt;&lt;strong&gt;Step 2: Creating a Dynamic IP Address&lt;/strong&gt;&lt;/p&gt;
 &lt;p&gt;I used &lt;noip.com&gt; to create a dynamic ip address for the server which allowed me to remotely connect to it in terminal. You can use &lt;a href="http://canyouseeme.org/"&gt;this website&lt;/a&gt; to verify that it’s working.&lt;/p&gt;
 &lt;p&gt;When I want to connect to my server, I type in a command that looks like this:&lt;/p&gt;
@@ -76,7 +81,7 @@ Photo credit to &lt;a href="https://blog.slavv.com/the-1700-great-deep-learning-
 
 &lt;p&gt;I have my server running on port 8888 and my jupyter notebooks on 8889 (the -L option redirects your specified local port to a different host &amp;amp; port). This is so that I can run notebooks locally on my machine for testing simultaneously with my server for training. If you don’t want this however, you can just type in everything before the -L part. I’ll explain how to change the port you run jupyter notebooks on in the next section.&lt;/p&gt;
 &lt;h3&gt;Installing DL/ML Libraries&lt;/h3&gt;
-&lt;p&gt;Now onto installing all of the libraries necessary for deep learning/machine learning. Depending on when you read this article, some of the steps may be simplfied or library versions changed for certain packages, so just be aware of that.  &lt;/p&gt;
+&lt;p&gt;Now onto installing all of the libraries necessary for deep learning/machine learning. Depending on when you read this article, some of the steps may be simplfied or library versions changed for certain packages, so just be aware of that.&lt;/p&gt;
 &lt;p&gt;First we’ll make sure our system is up to date and install all of the basic tools that we'll need:&lt;/p&gt;
 &lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;sudo apt-get update
 sudo apt-get --assume-yes upgrade
@@ -133,7 +138,7 @@ bash &lt;span class="s2"&gt;&amp;quot;Anaconda3-5.0.1-Linux-x86_64.sh&amp;quot;&
 
 &lt;span class="nb"&gt;cd&lt;/span&gt; ~
 
-&lt;span class="nb"&gt;echo&lt;/span&gt; &lt;span class="s2"&gt;&amp;quot;export PATH=\&amp;quot;&lt;/span&gt;&lt;span class="nv"&gt;$HOME&lt;/span&gt;&lt;span class="s2"&gt;/anaconda3/bin:\$PATH\&amp;quot;&amp;quot;&lt;/span&gt; &amp;gt;&amp;gt; ~/.bashrc
+&lt;span class="nb"&gt;echo&lt;/span&gt; &lt;span class="s2"&gt;&amp;quot;export PATH=\&amp;quot;&lt;/span&gt;&lt;span class="nv"&gt;$HOME&lt;/span&gt;&lt;span class="s2"&gt;/anaconda3/bin:&lt;/span&gt;&lt;span class="nv"&gt;$PATH&lt;/span&gt;&lt;span class="s2"&gt;\&amp;quot;&amp;quot;&lt;/span&gt; &amp;gt;&amp;gt; ~/.bashrc
 &lt;span class="nb"&gt;export&lt;/span&gt; &lt;span class="nv"&gt;PATH&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;&lt;/span&gt;&lt;span class="nv"&gt;$HOME&lt;/span&gt;&lt;span class="s2"&gt;/anaconda3/bin:&lt;/span&gt;&lt;span class="nv"&gt;$PATH&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;&lt;/span&gt;
 conda install -y bcolz
 conda upgrade -y --all
@@ -195,7 +200,7 @@ mkdir ~/.tmuxp
 
 
 &lt;p&gt;Next we’ll create the tmuxp config file that will set up our development environment in one command, without us having to configure our panes, launch jupyter notebook, etc. every time we want to work on something. For our fastai environment, we’ll start it with tmuxp load fastai. See this link on using tmuxp and here documents in bash scripts and this one for saving tmux sessions between server restarts. Anyways, here’s let’s configure our environment:&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;cat &amp;gt; &lt;span class="nv"&gt;$HOME&lt;/span&gt;/.tmuxp/fastai.yml &lt;span class="s"&gt;&amp;lt;&amp;lt;tmuxp-config &lt;/span&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;cat &amp;gt; &lt;span class="nv"&gt;$HOME&lt;/span&gt;/.tmuxp/fastai.yml &lt;span class="s"&gt;&amp;lt;&amp;lt;tmuxp-config&lt;/span&gt;
 &lt;span class="s"&gt;session_name: fast&lt;/span&gt;ai
 windows:
 - window_name: dev window
@@ -220,13 +225,13 @@ Tmuxp-config
 
 &lt;p&gt;Because we don’t need them anymore, let’s delete the installation files:&lt;/p&gt;
 &lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="nb"&gt;cd&lt;/span&gt; ~/downloads
-rm -rf cuda-repo-ubuntu1604_9.0.176-1_amd64.deb xf cudnn-9.1-linux-x64-v7.tgz Anaconda3-5.0.1-Linux-x86_64.sh        
+rm -rf cuda-repo-ubuntu1604_9.0.176-1_amd64.deb xf cudnn-9.1-linux-x64-v7.tgz Anaconda3-5.0.1-Linux-x86_64.sh
 
 &lt;span class="nb"&gt;cd&lt;/span&gt; ~
 &lt;/pre&gt;&lt;/div&gt;
 
 
-&lt;p&gt;And that’s it! As of writing this my server has been running 24/7 with no issues at all, completely silent and powering through training with ease. If you’ve got any questions, feel free to contact me via &lt;a href="mailto:ztboneg@gmail.com"&gt;email&lt;/a&gt;, &lt;a href="https://twitter.com/waydegg"&gt;Twitter&lt;/a&gt;, or on &lt;a href="http://forums.fast.ai/u/waydegg"&gt;Fastai Fourms&lt;/a&gt; and I’ll be more than happy to help! &lt;/p&gt;
+&lt;p&gt;And that’s it! As of writing this my server has been running 24/7 with no issues at all, completely silent and powering through training with ease. If you’ve got any questions, feel free to contact me via &lt;a href="mailto:ztboneg@gmail.com"&gt;email&lt;/a&gt;, &lt;a href="https://twitter.com/waydegg"&gt;Twitter&lt;/a&gt;, or on &lt;a href="http://forums.fast.ai/u/waydegg"&gt;Fastai Fourms&lt;/a&gt; and I’ll be more than happy to help!&lt;/p&gt;
 &lt;p&gt;Some more works I referenced:&lt;/p&gt;
 &lt;ul&gt;
 &lt;li&gt;https://www.digitalocean.com/community/tutorials/how-to-set-up-ssh-keys--2&lt;/li&gt;
